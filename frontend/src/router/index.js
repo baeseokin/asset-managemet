@@ -1,10 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../store/auth'
 
+const isMobileDevice = () => {
+  if (typeof window !== 'undefined') {
+    return window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  }
+  return false
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    // ─── Landing (Login) ────────────────────────────────
+    // ==========================================
+    // 🖥️ DESKTOP ROUTES
+    // ==========================================
     {
       path: '/',
       name: 'Login',
@@ -18,8 +27,6 @@ const router = createRouter({
         }
       }
     },
-
-    // ─── User Register ──────────────────────────────────
     {
       path: '/register',
       name: 'Register',
@@ -31,8 +38,6 @@ const router = createRouter({
       component: () => import('../views/ChangePasswordView.vue'),
       meta: { requiresAuth: true }
     },
-
-    // ─── Protected Routes (Logged in users) ─────────────
     {
       path: '/home',
       component: () => import('../layouts/PublicLayout.vue'),
@@ -55,8 +60,6 @@ const router = createRouter({
         }
       ]
     },
-
-    // ─── Admin & Manager Console Routes ──────────────────
     {
       path: '/admin',
       component: () => import('../layouts/AdminLayout.vue'),
@@ -105,6 +108,103 @@ const router = createRouter({
       ]
     },
 
+    // ==========================================
+    // 📱 MOBILE ROUTES (Prefixed with /m)
+    // ==========================================
+    {
+      path: '/m',
+      name: 'MobileLogin',
+      component: () => import('../views/mobile/AdminLoginView.vue'),
+      beforeEnter: (to, from, next) => {
+        const auth = useAuthStore()
+        if (auth.user) {
+          next({ name: 'MobileHome' })
+        } else {
+          next()
+        }
+      }
+    },
+    {
+      path: '/m/register',
+      name: 'MobileRegister',
+      component: () => import('../views/mobile/RegisterView.vue')
+    },
+    {
+      path: '/m/change-password',
+      name: 'MobileChangePassword',
+      component: () => import('../views/mobile/ChangePasswordView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/m/home',
+      component: () => import('../layouts/mobile/MobilePublicLayout.vue'),
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'MobileHome',
+          component: () => import('../views/mobile/HomeView.vue')
+        },
+        {
+          path: 'assets',
+          name: 'MobileAssets',
+          component: () => import('../views/mobile/AssetListView.vue')
+        },
+        {
+          path: 'profile',
+          name: 'MobileProfile',
+          component: () => import('../views/mobile/ProfileView.vue')
+        }
+      ]
+    },
+    {
+      path: '/m/admin',
+      component: () => import('../layouts/mobile/MobileAdminLayout.vue'),
+      meta: { requiresAdminOrManager: true },
+      children: [
+        {
+          path: '',
+          redirect: '/m/admin/assets'
+        },
+        {
+          path: 'assets',
+          name: 'MobileAdminAssets',
+          component: () => import('../views/mobile/AdminAssetManagementView.vue'),
+          meta: { requiresAdminOrManager: true }
+        },
+        {
+          path: 'approvals',
+          name: 'MobileAdminApprovals',
+          component: () => import('../views/mobile/AdminApprovalView.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'users',
+          name: 'MobileUserManagement',
+          component: () => import('../views/mobile/UserManagementView.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'departments',
+          name: 'MobileDepartmentManagement',
+          component: () => import('../views/mobile/DepartmentManagementView.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'categories',
+          name: 'MobileCategoryManagement',
+          component: () => import('../views/mobile/CategoryManagementView.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'locations',
+          name: 'MobileLocationManagement',
+          component: () => import('../views/mobile/LocationManagementView.vue'),
+          meta: { requiresAdminOrManager: true }
+        }
+      ]
+    },
+
     // ─── Fallback Redirect ──────────────────────────────
     {
       path: '/:pathMatch(.*)*',
@@ -120,35 +220,52 @@ router.beforeEach(async (to, from, next) => {
     await auth.checkSession()
   }
 
+  // 1. Mobile Detection & Automatic Redirection Redirect Guard
+  const isMobile = isMobileDevice()
+  const toPath = to.path
+
+  if (isMobile && !toPath.startsWith('/m')) {
+    let target = '/m' + toPath
+    if (toPath === '/') target = '/m'
+    target = target.replace(/\/+/g, '/')
+    return next(target)
+  } else if (!isMobile && toPath.startsWith('/m')) {
+    let target = toPath.slice(2)
+    if (target === '' || target === '/') target = '/'
+    if (!target.startsWith('/')) target = '/' + target
+    target = target.replace(/\/+/g, '/')
+    return next(target)
+  }
+
   // Already logged in? Redirect from Login page to Home
-  if (to.name === 'Login' && auth.user) {
-    return next({ name: 'Home' })
+  if (['Login', 'MobileLogin'].includes(to.name) && auth.user) {
+    return next(isMobile ? { name: 'MobileHome' } : { name: 'Home' })
   }
 
   // Auth-required routes
   if (to.meta.requiresAuth && !auth.user) {
-    return next({ name: 'Login' })
+    return next(isMobile ? { name: 'MobileLogin' } : { name: 'Login' })
   }
 
   // Admin or Manager required routes
   if (to.matched.some(record => record.meta.requiresAdminOrManager)) {
-    if (!auth.user) return next({ name: 'Login' })
-    if (!auth.isAdmin && !auth.isManager) return next({ name: 'Home' })
+    if (!auth.user) return next(isMobile ? { name: 'MobileLogin' } : { name: 'Login' })
+    if (!auth.isAdmin && !auth.isManager) return next(isMobile ? { name: 'MobileHome' } : { name: 'Home' })
   }
 
   // Specific Admin-required routes
   if (to.matched.some(record => record.meta.requiresAdmin)) {
-    if (!auth.user) return next({ name: 'Login' })
+    if (!auth.user) return next(isMobile ? { name: 'MobileLogin' } : { name: 'Login' })
     if (!auth.isAdmin) {
       // If it's a manager, redirect them to their allowed page (assets)
-      if (auth.isManager) return next({ name: 'AdminAssets' })
-      return next({ name: 'Home' })
+      if (auth.isManager) return next(isMobile ? { name: 'MobileAdminAssets' } : { name: 'AdminAssets' })
+      return next(isMobile ? { name: 'MobileHome' } : { name: 'Home' })
     }
   }
 
   // Mandatory password change check
-  if (auth.user?.mustChangePassword && !['ChangePassword', 'Login'].includes(to.name)) {
-    return next({ name: 'ChangePassword' })
+  if (auth.user?.mustChangePassword && !['ChangePassword', 'MobileChangePassword', 'Login', 'MobileLogin'].includes(to.name)) {
+    return next(isMobile ? { name: 'MobileChangePassword' } : { name: 'ChangePassword' })
   }
 
   next()
