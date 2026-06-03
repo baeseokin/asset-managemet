@@ -11,8 +11,9 @@
       <div class="glass-card bg-white/60 border border-slate-200 p-8 md:p-10 shadow-2xl rounded-2xl">
         <!-- Title Area -->
         <div class="flex flex-col items-center mb-8 text-center">
-          <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-indigo-650/30 mb-4">
-            A
+          <div class="relative inline-block mb-2">
+            <img src="../assets/login_bg.png" alt="Wonchon Church" class="w-48 mx-auto opacity-70 mix-blend-multiply" />
+            <div class="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
           </div>
           <h1 class="text-2xl font-black text-slate-900 tracking-tight leading-tight">
             자산 관리 시스템
@@ -85,9 +86,11 @@
       </div>
 
       <!-- Footer Info -->
-      <div class="mt-8 text-center">
-        <p class="text-[11px] text-slate-600 font-semibold tracking-wider">
-          © 2026 ASSET MANAGEMENT SYSTEM. ALL RIGHTS RESERVED.
+      <div class="mt-8 text-center text-slate-500 font-medium">
+        <p class="text-[11px] leading-relaxed">
+          (120-826) 서울특별시 서대문구 연희로 32길 19<br />
+          TEL. 02-337-5400 | FAX. 02-335-3576<br />
+          <span class="text-slate-600 font-bold mt-1 inline-block">© 2024 WONCHEON CHURCH. ALL RIGHTS RESERVED.</span>
         </p>
       </div>
     </div>

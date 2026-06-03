@@ -146,10 +146,6 @@ onUnmounted(() => {
           </h1>
           <p class="text-xs md:text-sm text-slate-400 font-medium break-keep leading-relaxed">
             그동안 수기나 개별 문서로 관리되어 파악하기 어려웠던 교회 자산을 디지털 전산으로 전환하여 투명하게 통합 모니터링하는 자산 관리 포털입니다.
-            <span class="hidden md:inline mx-1.5 text-slate-350">|</span>
-            <br class="md:hidden" />
-            소속 부서: <span class="text-indigo-600 font-bold">{{ auth.user?.deptName || '소속 미정' }}</span> | 권한 등급: 
-            <span v-for="r in auth.user?.roles" :key="r" class="text-emerald-400 font-black ml-1">[{{ r }}]</span>
           </p>
         </div>
 

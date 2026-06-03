@@ -89,9 +89,7 @@ onMounted(() => {
             {{ auth.user?.userName || '성도' }}님, 환영합니다
           </h1>
           <p class="text-xs md:text-sm text-slate-400 font-medium">
-            그동안 수기나 개별 문서로 관리되어 파악하기 어려웠던 교회 자산을 디지털 전산으로 전환하여 투명하게 통합 모니터링하는 자산 관리 포털입니다.<br />
-            소속 부서: <span class="text-indigo-600 font-bold">{{ auth.user?.deptName || '소속 미정' }}</span> | 권한 등급: 
-            <span v-for="r in auth.user?.roles" :key="r" class="text-emerald-450 font-black ml-1">[{{ r }}]</span>
+            그동안 수기나 개별 문서로 관리되어 파악하기 어려웠던 교회 자산을 디지털 전산으로 전환하여 투명하게 통합 모니터링하는 자산 관리 포털입니다.
           </p>
         </div>
 
