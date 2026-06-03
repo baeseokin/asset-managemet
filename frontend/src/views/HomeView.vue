@@ -42,6 +42,37 @@ const formatPrice = (val) => {
   return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val)
 }
 
+const getRequestTypeLabel = (type) => {
+  if (type === 'register') return '신규 등록'
+  if (type === 'modify') return '정보 수정'
+  if (type === 'dispose') return '자산 폐기'
+  if (type === 'delete') return '영구 삭제'
+  return type
+}
+
+const getRequestTypeClass = (type) => {
+  if (type === 'register') return 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+  if (type === 'modify') return 'bg-blue-50 text-blue-600 border border-blue-200'
+  if (type === 'dispose') return 'bg-orange-50 text-orange-600 border border-orange-200'
+  if (type === 'delete') return 'bg-rose-50 text-rose-600 border border-rose-200'
+  return 'bg-slate-50 text-slate-600 border border-slate-200'
+}
+
+const getAssetName = (item) => {
+  try {
+    const data = JSON.parse(item.requested_data)
+    return data.asset_name || '알 수 없는 자산'
+  } catch (e) {
+    return '알 수 없는 자산'
+  }
+}
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+}
+
 // Fetch dashboard data based on role
 const loadDashboardData = async () => {
   if (!auth.user) return
