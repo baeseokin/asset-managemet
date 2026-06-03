@@ -681,7 +681,7 @@ const formatPrice = (val) => {
                 </div>
                 <div>
                   <span class="text-[10px] text-slate-500 block font-semibold">시리얼 번호</span>
-                  <span class="font-mono text-slate-700 truncate block max-w-[100px]">{{ asset.serial_number || '없음' }}</span>
+                  <span class="font-mono text-slate-700 block break-words">{{ asset.serial_number || '없음' }}</span>
                 </div>
                 <div>
                   <span class="text-[10px] text-slate-500 block font-semibold">보관 위치</span>
@@ -689,7 +689,7 @@ const formatPrice = (val) => {
                 </div>
                 <div>
                   <span class="text-[10px] text-slate-500 block font-semibold">소속/담당자</span>
-                  <span class="text-slate-700 truncate block max-w-[100px]">{{ asset.manager_name }} ({{ asset.dept_name }})</span>
+                  <span class="text-slate-700 block break-words">{{ asset.manager_name }} ({{ asset.dept_name }})</span>
                 </div>
               </div>
             </div>

@@ -323,15 +323,15 @@ const getUsefulLifeInfo = (asset) => {
             <div class="pt-3 border-t border-slate-200 space-y-1.5 text-xs text-slate-400 font-medium">
               <div class="flex items-center gap-2">
                 <Tag class="w-3.5 h-3.5 text-slate-500" />
-                <span>코드: {{ asset.item_code }}</span>
+                <span class="break-words">코드: {{ asset.item_code }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <MapPin class="w-3.5 h-3.5 text-slate-500" />
-                <span>위치: {{ asset.location || '보관함' }}</span>
+                <span class="break-words">위치: {{ asset.location || '보관함' }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <User class="w-3.5 h-3.5 text-slate-500" />
-                <span>담당: {{ asset.manager_name }} ({{ asset.dept_name }})</span>
+                <span class="break-words">담당: {{ asset.manager_name }} ({{ asset.dept_name }})</span>
               </div>
             </div>
           </div>
