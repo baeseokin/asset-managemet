@@ -362,9 +362,12 @@ router.delete("/:id", isLogged, hasWriteAccess, async (req, res) => {
     // Asset Manager: submit disposal/deletion request
     const type = request_type === 'dispose' ? 'dispose' : 'delete';
     try {
+      const [assetRows] = await pool.query("SELECT asset_name FROM assets WHERE id = ?", [id]);
+      const assetName = assetRows.length > 0 ? assetRows[0].asset_name : '알 수 없는 자산';
+      
       const [result] = await pool.query(
         "INSERT INTO asset_change_requests (request_type, asset_id, requester_id, requested_data, status) VALUES (?, ?, ?, ?, 'pending')",
-        [type, id, user.id, JSON.stringify({ asset_id: id })]
+        [type, id, user.id, JSON.stringify({ asset_id: id, asset_name: assetName })]
       );
       res.json({ success: true, id: result.insertId, direct: false, message: `${type === 'dispose' ? '폐기' : '삭제'} 결재 요청이 재정부에 제출되었습니다.` });
     } catch (err) {

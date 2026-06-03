@@ -299,9 +299,10 @@ const rejectChange = async (reqId) => {
               자산 폐기 신청
             </div>
             <p class="font-semibold text-slate-750">
-              대상 자산: <strong class="text-slate-900">{{ req.original_asset_name }}</strong> (ID: {{ req.asset_id }})
+              대상 자산: <strong class="text-slate-900">{{ req.requested_data?.asset_name || req.original_asset_name || '알 수 없는 자산' }}</strong> (ID: {{ req.asset_id }})
             </p>
-            <p class="text-[11px] text-slate-400">승인 시 해당 기기의 상태는 '폐기됨(disposed)'으로 변경되며 대여가 차단됩니다.</p>
+            <p v-if="req.status === 'pending'" class="text-[11px] text-slate-400">승인 시 해당 기기의 상태는 '폐기됨(disposed)'으로 변경되며 대여가 차단됩니다.</p>
+            <p v-else-if="req.status === 'approved'" class="text-[11px] text-emerald-600 font-bold">이 자산은 폐기 처리되었습니다.</p>
           </div>
 
           <!-- Case D: Deletion Request -->
@@ -311,9 +312,10 @@ const rejectChange = async (reqId) => {
               자산 완전 삭제 신청
             </div>
             <p class="font-semibold text-slate-750">
-              대상 자산: <strong class="text-slate-900">{{ req.original_asset_name }}</strong> (ID: {{ req.asset_id }})
+              대상 자산: <strong class="text-slate-900">{{ req.requested_data?.asset_name || req.original_asset_name || '삭제된 자산' }}</strong> (ID: {{ req.asset_id }})
             </p>
-            <p class="text-[11px] text-slate-400">승인 시 자산 정보 및 과거 히스토리가 DB에서 완전히 영구 삭제됩니다.</p>
+            <p v-if="req.status === 'pending'" class="text-[11px] text-slate-400">승인 시 자산 정보 및 과거 히스토리가 DB에서 완전히 영구 삭제됩니다.</p>
+            <p v-else-if="req.status === 'approved'" class="text-[11px] text-rose-500 font-bold">이 자산은 데이터베이스에서 영구 삭제되었습니다.</p>
           </div>
 
         </div>
