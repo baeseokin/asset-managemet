@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-frontend
+  namespace: asset-management
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: asset-management-frontend
+  template:
+    metadata:
+      labels:
+        app: asset-management-frontend
+    spec:
+      containers:
+      - name: asset-management-frontend
+        image: baeseokin/asset-management-frontend:0.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asset-management-frontend
+  namespace: asset-management
+spec:
+  selector:
+    app: asset-management-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30006
+  type: NodePort
