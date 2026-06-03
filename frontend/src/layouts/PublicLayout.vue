@@ -3,11 +3,8 @@
     <!-- Top Navigation Bar (Premium Bright) -->
     <header class="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm shadow-slate-200/20">
       <div class="flex items-center gap-8">
-        <router-link to="/home" class="flex items-center gap-2 group transition-transform active:scale-95">
-          <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-600/30">
-            A
-          </div>
-          <span class="text-lg font-black tracking-wider text-slate-900">ASSET MANAGE</span>
+        <router-link to="/home" class="flex items-center group transition-transform active:scale-95">
+          <img src="../assets/logo_wonchon.png" alt="원천교회" class="w-8 h-8 object-cover object-left md:w-auto md:h-8 md:object-contain" />
         </router-link>
 
         <nav class="hidden md:flex items-center gap-1">
@@ -35,15 +32,7 @@
           </button>
         </template>
 
-        <!-- Admin & Manager Access -->
-        <template v-if="auth.isAdmin || auth.isManager">
-          <router-link to="/admin" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-lg shadow-indigo-100">
-            <Shield class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">관리 콘솔</span>
-          </router-link>
-        </template>
-        
-        <template v-else-if="!auth.user">
+        <template v-if="!auth.user">
           <router-link to="/" class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
             로그인
           </router-link>
@@ -99,16 +88,36 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAuthStore } from '../store/auth'
 import { LogOut, Shield, Menu, X } from 'lucide-vue-next'
 
 const auth = useAuthStore()
 const isMobileMenuOpen = ref(false)
 
-const navItems = [
-  { name: '대시보드', path: '/home' },
-  { name: '자산 목록', path: '/home/assets' },
-  { name: '내 정보', path: '/home/profile' }
-]
+const navItems = computed(() => {
+  const items = [
+    { name: '대시보드', path: '/home' }
+  ]
+
+  // 일반사용자에게만 교회자산목록 제공
+  if (!auth.isAdmin && !auth.isManager) {
+    items.push({ name: '자산 목록', path: '/home/assets' })
+  }
+
+  // 관리자 & 매니저 권한별 메뉴 추가
+  if (auth.isAdmin || auth.isManager) {
+    items.push({ name: '자산 정보 관리', path: '/home/admin-assets' })
+    items.push({ name: '보관 장소 관리', path: '/home/locations' })
+  }
+  if (auth.isAdmin) {
+    items.push({ name: '자산 결재 대기함', path: '/home/approvals' })
+    items.push({ name: '카테고리 관리', path: '/home/categories' })
+    items.push({ name: '사용자 권한 관리', path: '/home/users' })
+    items.push({ name: '조직/부서 관리', path: '/home/departments' })
+  }
+
+  items.push({ name: '내 정보', path: '/home/profile' })
+  return items
+})
 </script>

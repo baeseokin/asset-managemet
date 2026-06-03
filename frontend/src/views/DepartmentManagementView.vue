@@ -136,7 +136,7 @@ onMounted(fetchDepartments)
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div class="flex-1">
         <h1 class="text-2xl font-bold tracking-tight text-slate-900">조직 체계 관리</h1>
-        <p class="text-xs text-slate-400 font-semibold mt-1">부서 간의 계층 구조를 트리 형태로 설계하고 대여 책임 부서를 관리합니다.</p>
+        <p class="text-xs text-slate-400 font-semibold mt-1">부서 간의 계층 구조를 트리 형태로 설계하고 자산 관리 책임 부서를 관리합니다.</p>
       </div>
       
       <!-- Search and actions -->

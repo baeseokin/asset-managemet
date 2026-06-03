@@ -175,7 +175,7 @@ onMounted(() => {
                 <input type="text" v-model="profile.phone" class="input-field pl-11" placeholder="010-0000-0000" />
               </div>
               <p class="text-[10px] text-indigo-500 font-bold ml-1 mt-1 leading-normal">
-                ※ 대여/반납 승인 처리 시 입력하신 번호로 SMS/알림 전송용 데이터로 사용됩니다.
+                ※ 본인 확인 및 알림 전송용 데이터로 사용됩니다.
               </p>
             </div>
           </div>

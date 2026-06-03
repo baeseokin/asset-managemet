@@ -57,20 +57,9 @@ const router = createRouter({
           path: 'profile',
           name: 'Profile',
           component: () => import('../views/ProfileView.vue')
-        }
-      ]
-    },
-    {
-      path: '/admin',
-      component: () => import('../layouts/AdminLayout.vue'),
-      meta: { requiresAdminOrManager: true },
-      children: [
-        {
-          path: '',
-          redirect: '/admin/assets'
         },
         {
-          path: 'assets',
+          path: 'admin-assets',
           name: 'AdminAssets',
           component: () => import('../views/AdminAssetManagementView.vue'),
           meta: { requiresAdminOrManager: true }
@@ -154,20 +143,9 @@ const router = createRouter({
           path: 'profile',
           name: 'MobileProfile',
           component: () => import('../views/mobile/ProfileView.vue')
-        }
-      ]
-    },
-    {
-      path: '/m/admin',
-      component: () => import('../layouts/mobile/MobileAdminLayout.vue'),
-      meta: { requiresAdminOrManager: true },
-      children: [
-        {
-          path: '',
-          redirect: '/m/admin/assets'
         },
         {
-          path: 'assets',
+          path: 'admin-assets',
           name: 'MobileAdminAssets',
           component: () => import('../views/mobile/AdminAssetManagementView.vue'),
           meta: { requiresAdminOrManager: true }

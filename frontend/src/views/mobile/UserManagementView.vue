@@ -171,10 +171,7 @@ onMounted(() => {
   <div class="space-y-6 pb-10 text-slate-800">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">사용자 권한 관리</h1>
-        <p class="text-xs text-slate-400 font-semibold mt-1">시스템 사용 회원의 신규 가입 신청 승인, 정보 수정, 권한 할당 및 비밀번호 초기화를 관리합니다.</p>
-      </div>
+
       <div class="flex items-center gap-3">
         <div class="relative max-w-xs">
           <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />

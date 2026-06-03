@@ -245,8 +245,8 @@ const getCategoryIcon = (catName) => {
 }
 
 const getStatusLabel = (status) => {
-  if (status === 'available') return '대여 가능'
-  if (status === 'in_use') return '대여 중'
+  if (status === 'available') return '사용 가능'
+  if (status === 'in_use') return '사용 중'
   if (status === 'under_maintenance') return '수리 중'
   if (status === 'disposed') return '폐기됨'
   if (status === 'lost') return '분실됨'
@@ -263,7 +263,7 @@ const getStatusBadgeClass = (status) => {
 const getRequestStatusLabel = (status) => {
   if (status === 'pending') return '승인 대기'
   if (status === 'pending_return') return '반납확인 대기'
-  if (status === 'approved') return '대여 중'
+  if (status === 'approved') return '사용 중'
   if (status === 'rejected') return '반려됨'
   if (status === 'completed') return '반납 완료'
   return status
@@ -550,10 +550,6 @@ const formatPrice = (val) => {
   <div class="space-y-6 pb-10 text-slate-800">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">자산 정보 관리</h1>
-        <p class="text-xs text-slate-400 font-semibold mt-1">교회의 자산을 등록하고 정보를 일원화하여 통제합니다.</p>
-      </div>
       <div>
         <button @click="openAddAssetModal" class="btn-primary flex items-center gap-1 text-xs py-2.5">
           <Plus class="w-4 h-4" />
@@ -864,8 +860,8 @@ const formatPrice = (val) => {
               <label class="block font-bold text-slate-400">운영 상태</label>
               <div class="relative">
                 <select v-model="assetForm.status" class="input-field text-xs py-2 appearance-none cursor-pointer">
-                  <option value="available">대여 가능</option>
-                  <option value="in_use">대여 중</option>
+                  <option value="available">사용 가능</option>
+                  <option value="in_use">사용 중</option>
                   <option value="under_maintenance">수리/점검 중</option>
                   <option value="disposed">폐기됨</option>
                 </select>

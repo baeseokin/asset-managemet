@@ -124,11 +124,7 @@ const handleLogin = async () => {
       return
     }
 
-    if (auth.isAdmin) {
-      router.push('/admin')
-    } else {
-      router.push('/home')
-    }
+    router.push('/home')
   } else {
     errorMsg.value = result.message || '아이디 또는 비밀번호가 일치하지 않습니다.'
   }

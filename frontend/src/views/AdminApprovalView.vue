@@ -309,7 +309,7 @@ const rejectChange = async (reqId) => {
             <p class="font-semibold text-slate-750">
               대상 자산: <strong class="text-slate-900">{{ req.requested_data?.asset_name || req.original_asset_name || '알 수 없는 자산' }}</strong> (ID: {{ req.asset_id }})
             </p>
-            <p v-if="req.status === 'pending'" class="text-[11px] text-slate-400">승인 시 해당 기기의 상태는 '폐기됨(disposed)'으로 변경되며 대여가 차단됩니다.</p>
+            <p v-if="req.status === 'pending'" class="text-[11px] text-slate-400">승인 시 해당 기기의 상태는 '폐기됨(disposed)'으로 변경되며 추가 사용이 차단됩니다.</p>
             <p v-else-if="req.status === 'approved'" class="text-[11px] text-emerald-600 font-bold">이 자산은 폐기 처리되었습니다.</p>
           </div>
 

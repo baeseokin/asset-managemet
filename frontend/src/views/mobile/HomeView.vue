@@ -89,7 +89,7 @@ onMounted(() => {
             {{ auth.user?.userName || '성도' }}님, 환영합니다
           </h1>
           <p class="text-xs md:text-sm text-slate-400 font-medium">
-            교회 자산의 관리 및 정비 이력을 일원화하여 스마트하게 모니터링하는 자산 관리 포털입니다.<br />
+            그동안 수기나 개별 문서로 관리되어 파악하기 어려웠던 교회 자산을 디지털 전산으로 전환하여 투명하게 통합 모니터링하는 자산 관리 포털입니다.<br />
             소속 부서: <span class="text-indigo-600 font-bold">{{ auth.user?.deptName || '소속 미정' }}</span> | 권한 등급: 
             <span v-for="r in auth.user?.roles" :key="r" class="text-emerald-400 font-black ml-1">[{{ r }}]</span>
           </p>
@@ -99,11 +99,6 @@ onMounted(() => {
           <button @click="loadDashboardData" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-400 hover:text-slate-800 rounded-xl transition-all shadow-md">
             <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': isLoading }" />
           </button>
-
-          <router-link v-if="auth.isAdmin || auth.isManager" to="/m/admin" class="btn-primary flex items-center gap-2 px-5 py-3 text-xs font-bold shadow-indigo-600/20">
-            <ShieldCheck class="w-4 h-4" />
-            관리 콘솔 이동
-          </router-link>
         </div>
       </div>
     </div>
@@ -126,7 +121,7 @@ onMounted(() => {
         <!-- Metric Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <!-- Pending Change Requests -->
-          <router-link to="/m/admin/approvals" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
+          <router-link to="/m/home/approvals" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
             <div>
               <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">결재 대기 자산 등록/폐기 요청</div>
               <div class="text-3xl font-black text-slate-900 mt-1 tracking-tight">{{ adminStats.pendingChangeRequests }}건</div>
@@ -138,7 +133,7 @@ onMounted(() => {
           </router-link>
 
           <!-- Pending User Registrations -->
-          <router-link to="/m/admin/users" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
+          <router-link to="/m/home/users" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
             <div>
               <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">가입 승인 대기 인원</div>
               <div class="text-3xl font-black text-slate-900 mt-1 tracking-tight">{{ adminStats.pendingUsers }}명</div>
@@ -150,7 +145,7 @@ onMounted(() => {
           </router-link>
 
           <!-- Total Assets -->
-          <router-link to="/m/admin/assets" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
+          <router-link to="/m/home/admin-assets" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
             <div>
               <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">교회 총 등록 자산</div>
               <div class="text-3xl font-black text-slate-900 mt-1 tracking-tight">{{ adminStats.totalAssets }}개</div>
@@ -174,7 +169,7 @@ onMounted(() => {
               <router-link 
                 v-for="cat in adminStats.categoryStats" 
                 :key="cat.name" 
-                :to="`/m/admin/assets?category=${cat.name}`" 
+                :to="`/m/home/admin-assets?category=${cat.name}`" 
                 class="block space-y-1 hover:bg-slate-50 p-2 rounded-xl transition-all group"
               >
                 <div class="flex justify-between text-xs font-semibold">
@@ -202,7 +197,7 @@ onMounted(() => {
               <router-link 
                 v-for="dept in adminStats.deptStats" 
                 :key="dept.name" 
-                :to="`/m/admin/assets?dept=${dept.name}`" 
+                :to="`/m/home/admin-assets?dept=${dept.name}`" 
                 class="block space-y-1 hover:bg-slate-50 p-2 rounded-xl transition-all group"
               >
                 <div class="flex justify-between text-xs font-semibold">
@@ -230,7 +225,7 @@ onMounted(() => {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <!-- Maintenance Devices -->
-          <router-link :to="`/m/admin/assets?dept=${managerStats.dept}&status=under_maintenance`" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
+          <router-link :to="`/m/home/admin-assets?dept=${managerStats.dept}&status=under_maintenance`" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
             <div>
               <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">부서 수리/정비 대상</div>
               <div class="text-3xl font-black text-slate-900 mt-1 tracking-tight">{{ managerStats.maintenanceAssets.length }}개</div>
@@ -242,7 +237,7 @@ onMounted(() => {
           </router-link>
 
           <!-- Low Stock Consumables -->
-          <router-link :to="`/m/admin/assets?dept=${managerStats.dept}&filter=low_stock`" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
+          <router-link :to="`/m/home/admin-assets?dept=${managerStats.dept}&filter=low_stock`" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
             <div>
               <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">소모품 재고 경고</div>
               <div class="text-3xl font-black text-slate-900 mt-1 tracking-tight">{{ managerStats.lowStockConsumables.length }}건</div>
@@ -266,11 +261,11 @@ onMounted(() => {
               <router-link 
                 v-for="cat in managerStats.deptAssetsSummary" 
                 :key="cat.name" 
-                :to="`/m/admin/assets?dept=${managerStats.dept}&category=${cat.name}`" 
+                :to="`/m/home/admin-assets?dept=${managerStats.dept}&category=${cat.name}`" 
                 class="flex items-center justify-between text-xs hover:bg-slate-50 p-2 rounded-xl transition-all group"
               >
                 <span class="text-slate-455 font-bold flex items-center gap-2 group-hover:text-indigo-650 transition-colors">
-                  <component :is="getCategoryIcon(cat.name)" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600" />
+                  <component :is="getCategoryIcon(cat.name)" class="w-4 h-4 text-slate-400 group-hover:text-indigo-650" />
                   {{ cat.name }}
                 </span>
                 <span class="px-2.5 py-0.5 rounded bg-slate-100 border border-slate-300 font-bold text-slate-800 group-hover:bg-white group-hover:border-indigo-200 transition-all">{{ cat.count }}개</span>
@@ -292,7 +287,7 @@ onMounted(() => {
               <router-link 
                 v-for="item in managerStats.lowStockConsumables" 
                 :key="item.id" 
-                :to="`/m/admin/assets?search=${item.item_code}`" 
+                :to="`/m/home/admin-assets?search=${item.item_code}`" 
                 class="block p-3 bg-slate-50/60 rounded-xl border border-slate-200 flex items-center justify-between hover:border-indigo-500/50 hover:bg-white transition-all group"
               >
                 <div>
@@ -322,7 +317,7 @@ onMounted(() => {
               <router-link 
                 v-for="item in managerStats.maintenanceAssets" 
                 :key="item.id" 
-                :to="`/m/admin/assets?search=${item.item_code}`" 
+                :to="`/m/home/admin-assets?search=${item.item_code}`" 
                 class="block p-3 bg-slate-50/60 rounded-xl border border-slate-200 flex items-center justify-between hover:border-indigo-500/50 hover:bg-white transition-all group"
               >
                 <div>
@@ -352,7 +347,6 @@ onMounted(() => {
         <div class="space-y-2">
           <h2 class="text-xl font-bold text-slate-900">교회 자산 정보 열람</h2>
           <p class="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
-            교회 자산 대여 및 신청 기능이 비활성화되었습니다.<br />
             현재 교회가 보유하고 있는 방송 기기, 악기, 전자기기 및 가구 비품의 상세 사양과 보관 위치 등의 정보를 조회할 수 있습니다.
           </p>
         </div>

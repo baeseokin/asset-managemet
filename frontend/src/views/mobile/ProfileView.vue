@@ -104,8 +104,6 @@ onMounted(() => {
       </div>
       
       <div class="relative z-10 text-center md:text-left space-y-2">
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">내 프로필 설정</h1>
-        <p class="text-slate-400 font-semibold text-xs uppercase tracking-wider">개인 정보 및 소속 설정</p>
         <div class="flex flex-wrap gap-2 justify-center md:justify-start pt-1">
           <span class="px-2.5 py-0.5 bg-indigo-600/20 text-indigo-600 border border-indigo-200 rounded-full text-xs font-bold">{{ profile.dept_name || '부서 미지정' }}</span>
           <span class="px-2.5 py-0.5 bg-slate-100 text-slate-400 border border-slate-300 rounded-full text-xs font-bold">{{ profile.user_id }}</span>
@@ -175,7 +173,7 @@ onMounted(() => {
                 <input type="text" v-model="profile.phone" class="input-field pl-11" placeholder="010-0000-0000" />
               </div>
               <p class="text-[10px] text-indigo-500 font-bold ml-1 mt-1 leading-normal">
-                ※ 대여/반납 승인 처리 시 입력하신 번호로 SMS/알림 전송용 데이터로 사용됩니다.
+                ※ 본인 확인 및 알림 전송용 데이터로 사용됩니다.
               </p>
             </div>
           </div>

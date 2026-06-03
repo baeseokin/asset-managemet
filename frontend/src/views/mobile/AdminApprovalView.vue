@@ -154,13 +154,6 @@ const rejectChange = async (reqId) => {
 
 <template>
   <div class="space-y-6 pb-10 text-slate-800">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">자산 변경 결재함</h1>
-        <p class="text-xs text-slate-400 font-semibold mt-1">관리부(자산담당자)에서 신규 등록, 수정, 폐기, 삭제를 요청한 내역을 심사 및 결재합니다.</p>
-      </div>
-    </div>
 
     <!-- Filter tabs -->
     <div class="flex gap-2 bg-white p-2 rounded-xl border border-slate-200 w-fit">
@@ -301,7 +294,7 @@ const rejectChange = async (reqId) => {
             <p class="font-semibold text-slate-750">
               대상 자산: <strong class="text-slate-900">{{ req.requested_data?.asset_name || req.original_asset_name || '알 수 없는 자산' }}</strong> (ID: {{ req.asset_id }})
             </p>
-            <p v-if="req.status === 'pending'" class="text-[11px] text-slate-400">승인 시 해당 기기의 상태는 '폐기됨(disposed)'으로 변경되며 대여가 차단됩니다.</p>
+            <p v-if="req.status === 'pending'" class="text-[11px] text-slate-400">승인 시 해당 기기의 상태는 '폐기됨(disposed)'으로 변경되며 추가 사용이 차단됩니다.</p>
             <p v-else-if="req.status === 'approved'" class="text-[11px] text-emerald-600 font-bold">이 자산은 폐기 처리되었습니다.</p>
           </div>
 

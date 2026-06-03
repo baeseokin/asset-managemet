@@ -198,7 +198,7 @@ const getUsefulLifeInfo = (asset) => {
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-slate-900">교회 자산 목록</h1>
-        <p class="text-xs text-slate-400 font-semibold mt-1">교회가 소유한 전체 물품 정보를 검색하고 대여 및 정보를 신청합니다.</p>
+        <p class="text-xs text-slate-400 font-semibold mt-1">교회가 소유한 전체 물품 정보를 검색하고 상세 정보를 조회합니다.</p>
       </div>
     </div>
 

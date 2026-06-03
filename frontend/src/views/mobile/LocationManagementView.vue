@@ -100,10 +100,6 @@ onMounted(fetchLocations)
   <div class="space-y-6 pb-10 text-slate-800">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="flex-1">
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">보관 장소 관리</h1>
-        <p class="text-xs text-slate-400 font-semibold mt-1">자산이 배치되거나 보관 중인 교회의 상세 방 위치 및 창고 정보를 관리합니다.</p>
-      </div>
       
       <!-- Actions -->
       <div class="flex flex-wrap items-center gap-3">

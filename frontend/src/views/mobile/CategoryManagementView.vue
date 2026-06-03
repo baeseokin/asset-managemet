@@ -98,10 +98,7 @@ onMounted(fetchCategories)
   <div class="space-y-6 pb-10 text-slate-800">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="flex-1">
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">카테고리 분류 관리</h1>
-        <p class="text-xs text-slate-400 font-semibold mt-1">교회 자산을 체계적으로 나누는 방송 장비, 악기, 차량, 서적 등 그룹 정보를 관리합니다.</p>
-      </div>
+
       
       <!-- Actions -->
       <div class="flex flex-wrap items-center gap-3">
