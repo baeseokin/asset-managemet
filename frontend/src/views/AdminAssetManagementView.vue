@@ -69,7 +69,7 @@ const assetForm = ref({
   is_consumable: false,
   stock_quantity: 0,
   location: '',
-  dept_name: '관리부', // Default to 관리부
+  dept_name: auth.user?.deptName || '', // Default to user's department
   manager_name: '',
   manager_contact: '',
   description: '',
@@ -300,7 +300,7 @@ const openAddAssetModal = () => {
     is_consumable: false,
     stock_quantity: 0,
     location: locations.value[0]?.location_name || '',
-    dept_name: '관리부', // Default to 관리부
+    dept_name: auth.user?.deptName || '', // Default to user's department
     manager_name: auth.user?.userName || '',
     manager_contact: auth.user?.phone || '',
     description: '',
@@ -332,7 +332,7 @@ const openEditAssetModal = (asset) => {
     is_consumable: !!asset.is_consumable,
     stock_quantity: asset.stock_quantity || 0,
     location: asset.location || '',
-    dept_name: asset.dept_name || '관리부',
+    dept_name: asset.dept_name || auth.user?.deptName || '',
     manager_name: asset.manager_name || '',
     manager_contact: asset.manager_contact || '',
     description: asset.description || '',

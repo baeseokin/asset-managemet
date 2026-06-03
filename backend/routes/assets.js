@@ -89,29 +89,36 @@ router.get("/manager-stats", isLogged, async (req, res) => {
   const dept = user.deptName || '관리부';
 
   try {
-    // 1. Department assets summary grouped by category
+    // 1. Assets summary grouped by category (all departments)
     const [deptAssetsSummary] = await pool.query(
-      "SELECT IFNULL(category_name, '미지정') as name, COUNT(*) as count FROM assets WHERE dept_name = ? GROUP BY category_name",
-      [dept]
+      "SELECT IFNULL(category_name, '미지정') as name, COUNT(*) as count FROM assets GROUP BY category_name"
     );
 
-    // 2. Low stock consumables (stock <= 5)
-    const [lowStockConsumables] = await pool.query(
-      "SELECT * FROM assets WHERE dept_name = ? AND is_consumable = 1 AND stock_quantity <= 5",
-      [dept]
+    // 2. Pending change requests count by this manager
+    const [pendingRequestsCountRows] = await pool.query(
+      "SELECT COUNT(*) as count FROM asset_change_requests WHERE requester_id = ? AND status = 'pending'",
+      [user.id]
+    );
+    const pendingRequestsCount = pendingRequestsCountRows[0].count;
+
+    // 2b. Recent change requests by this manager
+    const [recentRequests] = await pool.query(
+      "SELECT id, request_type, asset_id, requested_data, status, reject_reason, created_at FROM asset_change_requests WHERE requester_id = ? ORDER BY id DESC LIMIT 5",
+      [user.id]
     );
 
-    // 3. Maintenance assets list
+    // 3. Maintenance assets list (all departments)
     const [maintenanceAssets] = await pool.query(
-      "SELECT * FROM assets WHERE dept_name = ? AND status = 'under_maintenance' ORDER BY updated_at DESC",
-      [dept]
+      "SELECT * FROM assets WHERE status = 'under_maintenance' ORDER BY updated_at DESC"
     );
 
     res.json({
       dept,
       deptAssetsSummary,
-      lowStockConsumables,
-      maintenanceAssets
+      lowStockConsumables: [],
+      maintenanceAssets,
+      pendingRequestsCount,
+      recentRequests
     });
   } catch (err) {
     console.error("Fetch manager stats error:", err);
@@ -169,7 +176,7 @@ router.post("/", isLogged, hasWriteAccess, upload.single("image"), async (req, r
     is_consumable: is_consumable === "true" || is_consumable === "1" ? 1 : 0,
     stock_quantity: stock_quantity ? parseInt(stock_quantity) : 0,
     location,
-    dept_name: dept_name || '관리부',
+    dept_name: dept_name || user.deptName || '미지정',
     manager_name: manager_name || user.userName,
     manager_contact: manager_contact || user.phone,
     image_url,
