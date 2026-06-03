@@ -206,13 +206,13 @@ router.beforeEach(async (to, from, next) => {
     let target = '/m' + toPath
     if (toPath === '/') target = '/m'
     target = target.replace(/\/+/g, '/')
-    return next(target)
+    return next({ path: target, query: to.query, hash: to.hash })
   } else if (!isMobile && toPath.startsWith('/m')) {
     let target = toPath.slice(2)
     if (target === '' || target === '/') target = '/'
     if (!target.startsWith('/')) target = '/' + target
     target = target.replace(/\/+/g, '/')
-    return next(target)
+    return next({ path: target, query: to.query, hash: to.hash })
   }
 
   // Already logged in? Redirect from Login page to Home
@@ -222,18 +222,21 @@ router.beforeEach(async (to, from, next) => {
 
   // Auth-required routes
   if (to.meta.requiresAuth && !auth.user) {
-    return next(isMobile ? { name: 'MobileLogin' } : { name: 'Login' })
+    return next(isMobile 
+      ? { name: 'MobileLogin', query: { redirect: to.fullPath } } 
+      : { name: 'Login', query: { redirect: to.fullPath } }
+    )
   }
 
   // Admin or Manager required routes
   if (to.matched.some(record => record.meta.requiresAdminOrManager)) {
-    if (!auth.user) return next(isMobile ? { name: 'MobileLogin' } : { name: 'Login' })
+    if (!auth.user) return next(isMobile ? { name: 'MobileLogin', query: { redirect: to.fullPath } } : { name: 'Login', query: { redirect: to.fullPath } })
     if (!auth.isAdmin && !auth.isManager) return next(isMobile ? { name: 'MobileHome' } : { name: 'Home' })
   }
 
   // Specific Admin-required routes
   if (to.matched.some(record => record.meta.requiresAdmin)) {
-    if (!auth.user) return next(isMobile ? { name: 'MobileLogin' } : { name: 'Login' })
+    if (!auth.user) return next(isMobile ? { name: 'MobileLogin', query: { redirect: to.fullPath } } : { name: 'Login', query: { redirect: to.fullPath } })
     if (!auth.isAdmin) {
       // If it's a manager, redirect them to their allowed page (assets)
       if (auth.isManager) return next(isMobile ? { name: 'MobileAdminAssets' } : { name: 'AdminAssets' })

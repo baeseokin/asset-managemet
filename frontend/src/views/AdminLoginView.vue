@@ -100,11 +100,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useAuthStore } from '../store/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Eye, EyeOff, ArrowRight } from 'lucide-vue-next'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const userId = ref('')
 const password = ref('')
@@ -127,7 +128,8 @@ const handleLogin = async () => {
       return
     }
 
-    router.push('/home')
+    const redirectPath = route.query.redirect || '/home'
+    router.push(redirectPath)
   } else {
     errorMsg.value = result.message || '아이디 또는 비밀번호가 일치하지 않습니다.'
   }
