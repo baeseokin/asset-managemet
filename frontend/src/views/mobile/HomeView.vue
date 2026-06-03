@@ -275,9 +275,15 @@ onUnmounted(() => {
 
       <!-- 👤 SECTION B: MANAGER (자산 담당자 - 관리부) DASHBOARD -->
       <section v-if="auth.isManager && managerStats" class="space-y-6 pt-2">
-        <div class="border-b border-slate-200 pb-2 flex items-center gap-2">
-          <Briefcase class="w-5 h-5 text-indigo-600" />
-          <h2 class="text-lg font-black text-slate-900">자산 담당자 현황판 (관리부)</h2>
+        <div class="border-b border-slate-200 pb-2 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <Briefcase class="w-5 h-5 text-indigo-600" />
+            <h2 class="text-lg font-black text-slate-900">자산 담당자 현황판 (관리부)</h2>
+          </div>
+          <router-link to="/m/home/admin-assets?action=register" class="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
+            <Package class="w-4 h-4" />
+            신규 자산 등록
+          </router-link>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">

@@ -150,6 +150,24 @@ const rejectChange = async (reqId) => {
     modal.showAlert('반려 처리 실패')
   }
 }
+
+const showImageZoomModal = ref(false)
+const zoomedImageUrl = ref('')
+
+const openImageZoom = (url) => {
+  if (!url) return
+  zoomedImageUrl.value = url
+  showImageZoomModal.value = true
+}
+
+const getAssetImage = (req) => {
+  if (req.requested_data?.image_url) return req.requested_data.image_url
+  if (req.asset_id) {
+    const asset = assets.value.find(a => a.id === req.asset_id)
+    if (asset?.image_url) return asset.image_url
+  }
+  return null
+}
 </script>
 
 <template>
@@ -225,7 +243,12 @@ const rejectChange = async (reqId) => {
               신규 등록 정보
             </div>
             
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[11px]">
+            <div class="flex gap-4">
+              <div class="w-20 h-20 shrink-0 border border-slate-200 rounded-lg overflow-hidden flex items-center justify-center bg-slate-50 shadow-sm">
+                <img v-if="getAssetImage(req)" :src="getAssetImage(req)" class="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity" @click.stop="openImageZoom(getAssetImage(req))" title="크게 보기" @error="$event.target.style.display='none'" />
+                <span v-else class="text-[10px] text-slate-400 font-bold">사진 없음</span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[11px] flex-1">
               <div>
                 <span class="text-slate-400">자산명</span>
                 <p class="font-bold text-slate-800">{{ req.requested_data.asset_name }}</p>
@@ -259,6 +282,7 @@ const rejectChange = async (reqId) => {
                 <p class="font-bold text-slate-800">{{ req.requested_data.purchase_price ? `${new Intl.NumberFormat('ko-KR').format(req.requested_data.purchase_price)}원` : '기록없음' }}</p>
               </div>
             </div>
+            </div>
           </div>
 
           <!-- Case B: Modification Request -->
@@ -267,9 +291,15 @@ const rejectChange = async (reqId) => {
               자산 대상: <strong class="text-slate-800">{{ req.original_asset_name }}</strong> (ID: {{ req.asset_id }})
             </div>
 
-            <!-- Diff display -->
-            <div v-if="getModificationDiff(req).length > 0" class="space-y-2">
-              <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">변경 세부 정보 (Diff)</div>
+            <div class="flex gap-4">
+              <div class="w-20 h-20 shrink-0 border border-slate-200 rounded-lg overflow-hidden flex items-center justify-center bg-slate-50 shadow-sm">
+                <img v-if="getAssetImage(req)" :src="getAssetImage(req)" class="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity" @click.stop="openImageZoom(getAssetImage(req))" title="크게 보기" @error="$event.target.style.display='none'" />
+                <span v-else class="text-[10px] text-slate-400 font-bold">사진 없음</span>
+              </div>
+              <div class="flex-1 space-y-2">
+                <!-- Diff display -->
+                <div v-if="getModificationDiff(req).length > 0" class="space-y-2">
+                  <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">변경 세부 정보 (Diff)</div>
               
               <div class="space-y-2.5 divide-y divide-slate-100">
                 <div v-for="diff in getModificationDiff(req)" :key="diff.label" class="pt-2.5 first:pt-0 text-xs">
@@ -283,6 +313,8 @@ const rejectChange = async (reqId) => {
               </div>
             </div>
             <div v-else class="text-xs text-slate-400">자산의 실물 사진만 교체되었거나 메타데이터에 유의미한 변화가 없습니다.</div>
+              </div>
+            </div>
           </div>
 
           <!-- Case C: Disposal Request -->
@@ -343,6 +375,16 @@ const rejectChange = async (reqId) => {
       <h3 class="text-sm font-bold text-slate-400">결재 요청 내역이 존재하지 않습니다</h3>
       <p class="text-xs text-slate-500 mt-1">심사할 항목이 없습니다.</p>
     </div>
+    <!-- Image Zoom Modal -->
+    <Teleport to="body">
+      <div v-if="showImageZoomModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4 z-[70]" @click="showImageZoomModal = false">
+        <button @click="showImageZoomModal = false" class="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all">
+          <X class="w-6 h-6" />
+        </button>
+        <img :src="zoomedImageUrl" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" @click.stop />
+      </div>
+    </Teleport>
+
   </div>
 </template>
 

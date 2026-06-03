@@ -181,6 +181,15 @@ const parseRouteQuery = () => {
       viewAssetDetails(matched)
     }
   }
+
+  // Automatically open Add Asset modal if action=register
+  if (route.query.action === 'register') {
+    openAddAssetModal()
+    // Remove the query parameter so it doesn't reopen on refresh
+    const query = { ...route.query }
+    delete query.action
+    router.replace({ query })
+  }
 }
 
 onMounted(async () => {
@@ -336,7 +345,8 @@ const openEditAssetModal = (asset) => {
     manager_name: asset.manager_name || '',
     manager_contact: asset.manager_contact || '',
     description: asset.description || '',
-    status: asset.status
+    status: asset.status,
+    image_url: asset.image_url
   }
   showAssetModal.value = true
 }
@@ -404,6 +414,15 @@ const deleteAsset = async (assetId, requestType = 'delete') => {
 // QR Code printing logic
 const selectedAssetIds = ref([])
 const printMode = ref('single')
+
+const showImageZoomModal = ref(false)
+const zoomedImageUrl = ref('')
+
+const openImageZoom = (url) => {
+  if (!url) return
+  zoomedImageUrl.value = url
+  showImageZoomModal.value = true
+}
 
 const windowOrigin = computed(() => {
   return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'
@@ -628,7 +647,7 @@ const formatPrice = (val) => {
                   <td class="p-4">
                     <div class="flex items-center gap-3">
                       <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
-                        <img v-if="asset.image_url" :src="asset.image_url" class="object-cover w-full h-full" />
+                        <img v-if="asset.image_url" :src="asset.image_url" class="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity" @click.stop="openImageZoom(asset.image_url)" title="크게 보기" />
                         <component v-else :is="getCategoryIcon(asset.category_name)" class="w-5 h-5 text-slate-400" />
                       </div>
                       <div>
@@ -863,10 +882,15 @@ const formatPrice = (val) => {
             <!-- Image Upload -->
             <div class="space-y-1.5 pt-2 border-t border-slate-200">
               <label class="block font-bold text-slate-400">자산 실물 사진 등록</label>
+              
+              <div v-if="isEditing && assetForm.image_url" class="mb-3">
+                <img :src="assetForm.image_url" class="w-24 h-24 object-cover rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:opacity-80 transition-opacity" @click="openImageZoom(assetForm.image_url)" title="크게 보기" />
+              </div>
+
               <input type="file" @change="handleImageChange" accept="image/*" class="text-[11px] text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-slate-100 file:text-slate-800 file:hover:bg-slate-100 cursor-pointer" />
-              <div v-if="isEditing" class="flex items-center gap-2 mt-2">
-                <input v-model="removeImageChecked" type="checkbox" id="remove-img" class="rounded text-indigo-600 focus:ring-0 focus:ring-offset-0 bg-white border-slate-300 w-4 h-4" />
-                <label for="remove-img" class="text-slate-400 font-semibold">기존 사진 삭제</label>
+              <div v-if="isEditing && assetForm.image_url" class="flex items-center gap-2 mt-2">
+                <input v-model="removeImageChecked" type="checkbox" id="remove-img" class="rounded text-indigo-600 focus:ring-0 focus:ring-offset-0 bg-white border-slate-300 w-4 h-4 cursor-pointer" />
+                <label for="remove-img" class="text-slate-400 font-semibold cursor-pointer">기존 사진 삭제</label>
               </div>
             </div>
 
@@ -1116,7 +1140,7 @@ const formatPrice = (val) => {
             <div v-if="detailTab === 'basic'" class="space-y-4">
               <div class="flex gap-4 p-4 bg-slate-50/60 rounded-xl border border-slate-200">
                 <div class="w-16 h-16 bg-white border border-slate-200 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                  <img v-if="selectedDetailAsset.image_url" :src="selectedDetailAsset.image_url" class="object-cover w-full h-full" />
+                  <img v-if="selectedDetailAsset.image_url" :src="selectedDetailAsset.image_url" class="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity" @click.stop="openImageZoom(selectedDetailAsset.image_url)" title="크게 보기" />
                   <component v-else :is="getCategoryIcon(selectedDetailAsset.category_name)" class="w-6 h-6 text-slate-400" />
                 </div>
                 <div>
@@ -1255,6 +1279,16 @@ const formatPrice = (val) => {
             <button @click="showDetailModal = false" class="btn-secondary w-full py-3 text-xs">닫기</button>
           </div>
         </div>
+      </div>
+    </Teleport>
+
+    <!-- Image Zoom Modal -->
+    <Teleport to="body">
+      <div v-if="showImageZoomModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4 z-[60]" @click="showImageZoomModal = false">
+        <button @click="showImageZoomModal = false" class="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all">
+          <X class="w-6 h-6" />
+        </button>
+        <img :src="zoomedImageUrl" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" @click.stop />
       </div>
     </Teleport>
 

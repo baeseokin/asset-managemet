@@ -183,6 +183,15 @@ const parseRouteQuery = () => {
       viewAssetDetails(matched)
     }
   }
+
+  // Automatically open Add Asset modal if action=register
+  if (route.query.action === 'register') {
+    openAddAssetModal()
+    // Remove the query parameter so it doesn't reopen on refresh
+    const query = { ...route.query }
+    delete query.action
+    router.replace({ query })
+  }
 }
 
 onMounted(async () => {
@@ -435,6 +444,15 @@ const deleteAsset = async (assetId, requestType = 'delete') => {
 const selectedAssetIds = ref([])
 const printMode = ref('single')
 
+const showImageZoomModal = ref(false)
+const zoomedImageUrl = ref('')
+
+const openImageZoom = (url) => {
+  if (!url) return
+  zoomedImageUrl.value = url
+  showImageZoomModal.value = true
+}
+
 const windowOrigin = computed(() => {
   return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'
 })
@@ -653,7 +671,7 @@ const formatPrice = (val) => {
             <!-- Category / Serial / Location / Owner -->
             <div class="flex gap-3 pt-1">
               <div class="w-14 h-14 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
-                <img v-if="asset.image_url" :src="asset.image_url" class="object-cover w-full h-full" />
+                <img v-if="asset.image_url" :src="asset.image_url" class="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity" @click.stop="openImageZoom(asset.image_url)" title="크게 보기" />
                 <component v-else :is="getCategoryIcon(asset.category_name)" class="w-5 h-5 text-slate-400" />
               </div>
               <div class="flex-1 grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs text-slate-400">
@@ -891,7 +909,7 @@ const formatPrice = (val) => {
 
               <!-- Preview window -->
               <div v-if="imagePreviewUrl" class="mt-3 relative w-full aspect-[4/3] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center shadow-md animate-in fade-in duration-200">
-                <img :src="imagePreviewUrl" class="w-full h-full object-cover" />
+                <img :src="imagePreviewUrl" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" @click="openImageZoom(imagePreviewUrl)" title="크게 보기" />
                 <button type="button" @click="clearSelectedImage" class="absolute top-2.5 right-2.5 p-1.5 bg-slate-900/60 hover:bg-slate-900/85 text-white rounded-full transition-colors">
                   <X class="w-3.5 h-3.5" />
                 </button>
@@ -1149,7 +1167,7 @@ const formatPrice = (val) => {
             <div v-if="detailTab === 'basic'" class="space-y-4">
               <div class="flex gap-4 p-4 bg-slate-50/60 rounded-xl border border-slate-200">
                 <div class="w-16 h-16 bg-white border border-slate-200 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                  <img v-if="selectedDetailAsset.image_url" :src="selectedDetailAsset.image_url" class="object-cover w-full h-full" />
+                  <img v-if="selectedDetailAsset.image_url" :src="selectedDetailAsset.image_url" class="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity" @click.stop="openImageZoom(selectedDetailAsset.image_url)" title="크게 보기" />
                   <component v-else :is="getCategoryIcon(selectedDetailAsset.category_name)" class="w-6 h-6 text-slate-400" />
                 </div>
                 <div>
@@ -1288,6 +1306,16 @@ const formatPrice = (val) => {
             <button @click="showDetailModal = false" class="btn-secondary w-full py-3 text-xs">닫기</button>
           </div>
         </div>
+      </div>
+    </Teleport>
+
+    <!-- Image Zoom Modal -->
+    <Teleport to="body">
+      <div v-if="showImageZoomModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4 z-[70]" @click="showImageZoomModal = false">
+        <button @click="showImageZoomModal = false" class="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all">
+          <X class="w-6 h-6" />
+        </button>
+        <img :src="zoomedImageUrl" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" @click.stop />
       </div>
     </Teleport>
 
