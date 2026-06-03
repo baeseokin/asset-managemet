@@ -35,6 +35,9 @@ fi
 # 4. Kubernetes Deployment 업데이트
 echo "📡 Kubernetes 배포 업데이트..."
 
+# 네임스페이스가 없으면 생성
+kubectl create namespace asset-management --dry-run=client -o yaml | kubectl apply -f -
+
 # 매니페스트 파일의 이미지를 현재 버전으로 변경하여 배포 (항상 apply 수행하여 YAML 변경사항 반영)
 sed "s|image: $IMAGE_NAME:.*|image: $IMAGE_NAME:$VERSION|g" ../k8s/asset-management-frontend.yaml | kubectl apply -f -
 
