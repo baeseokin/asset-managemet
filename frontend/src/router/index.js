@@ -3,7 +3,9 @@ import { useAuthStore } from '../store/auth'
 
 const isMobileDevice = () => {
   if (typeof window !== 'undefined') {
-    return window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    return window.innerWidth < 768 || /android|webos|blackberry|iemobile|opera mini|mobile|mobi/i.test(userAgent) || isIOS
   }
   return false
 }
