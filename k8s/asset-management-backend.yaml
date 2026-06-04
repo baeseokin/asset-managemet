@@ -24,6 +24,9 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 3003
+          volumeMounts:
+            - name: uploads-volume
+              mountPath: /app/uploads
           env:
             - name: DB_HOST
               value: "mariadb-service.report"
@@ -37,6 +40,10 @@ spec:
               value: "assetdb"
             - name: CORS_ORIGIN
               value: "http://localhost:30006,http://localhost:30005,http://localhost:5173"
+      volumes:
+        - name: uploads-volume
+          persistentVolumeClaim:
+            claimName: asset-management-uploads-pvc
 ---
 apiVersion: v1
 kind: Service
