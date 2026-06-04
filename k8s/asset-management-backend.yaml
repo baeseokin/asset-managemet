@@ -18,6 +18,16 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
 
+      initContainers:
+        - name: volume-permissions
+          image: busybox
+          command: ["sh", "-c", "mkdir -p /app/uploads/assets && chown -R 1000:1000 /app/uploads"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: uploads-volume
+              mountPath: /app/uploads
+
       containers:
         - name: asset-management-backend 
           image: baeseokin/asset-management-backend:0.1
