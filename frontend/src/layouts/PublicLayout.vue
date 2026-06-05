@@ -105,16 +105,22 @@ const navItems = computed(() => {
     items.push({ name: '자산 목록', path: '/home/assets' })
   }
 
-  // 관리자 & 매니저 권한별 메뉴 추가
   if (auth.isAdmin || auth.isManager) {
     items.push({ name: '자산 정보 관리', path: '/home/admin-assets' })
-    items.push({ name: '보관 장소 관리', path: '/home/locations' })
   }
+
   if (auth.isAdmin) {
     items.push({ name: '자산 결재 대기함', path: '/home/approvals' })
+  }
+
+  if (auth.isAdmin || auth.isManager) {
+    items.push({ name: '보관 장소 관리', path: '/home/locations' })
+  }
+
+  if (auth.isAdmin) {
     items.push({ name: '카테고리 관리', path: '/home/categories' })
-    items.push({ name: '사용자 권한 관리', path: '/home/users' })
     items.push({ name: '조직/부서 관리', path: '/home/departments' })
+    items.push({ name: '사용자 권한 관리', path: '/home/users' })
   }
 
   items.push({ name: '내 정보', path: '/home/profile' })

@@ -7,7 +7,7 @@
           <img src="../../assets/logo_wonchon.png" alt="원천교회" class="w-8 h-8 object-cover object-left md:w-auto md:h-8 md:object-contain" />
         </router-link>
         <div class="w-px h-4 bg-slate-200"></div>
-        <h1 class="text-xs font-black text-slate-800 tracking-tight">{{ pageTitle }}</h1>
+        <h1 class="text-sm md:text-base font-black text-slate-800 tracking-tight">{{ pageTitle }}</h1>
       </div>
 
       <div class="flex items-center gap-2">
@@ -32,7 +32,7 @@
       leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div v-if="isDrawerOpen" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50" @click="isDrawerOpen = false">
+      <div v-if="isDrawerOpen" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[60]" @click="isDrawerOpen = false">
         <Transition
           enter-active-class="transition-transform duration-300 ease-out"
           enter-from-class="translate-x-full"
@@ -176,14 +176,20 @@ const allMenuItems = computed(() => {
 
   if (auth.isAdmin || auth.isManager) {
     items.push({ name: '자산 정보 관리', icon: Briefcase, path: '/m/home/admin-assets' })
-    items.push({ name: '보관 장소 관리', icon: MapPin, path: '/m/home/locations' })
   }
 
   if (auth.isAdmin) {
     items.push({ name: '자산 결재 대기함', icon: CheckSquare, path: '/m/home/approvals' })
+  }
+
+  if (auth.isAdmin || auth.isManager) {
+    items.push({ name: '보관 장소 관리', icon: MapPin, path: '/m/home/locations' })
+  }
+
+  if (auth.isAdmin) {
     items.push({ name: '카테고리 관리', icon: Layers, path: '/m/home/categories' })
-    items.push({ name: '사용자 권한 관리', icon: Users, path: '/m/home/users' })
     items.push({ name: '조직/부서 관리', icon: Building2, path: '/m/home/departments' })
+    items.push({ name: '사용자 권한 관리', icon: Users, path: '/m/home/users' })
   }
 
   items.push({ name: '내 정보', icon: User, path: '/m/home/profile' })
