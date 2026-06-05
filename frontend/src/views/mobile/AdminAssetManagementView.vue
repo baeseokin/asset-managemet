@@ -482,7 +482,7 @@ const printBulkQr = () => {
 
 const qrCodeValue = computed(() => {
   if (!selectedQrAsset.value) return ''
-  return `${windowOrigin.value}/home/assets?search=${selectedQrAsset.value.item_code}`
+  return `${windowOrigin.value}/m/home/admin-assets?search=${selectedQrAsset.value.item_code}`
 })
 
 const toggleSelectAll = (e) => {

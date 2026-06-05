@@ -233,7 +233,10 @@ router.beforeEach(async (to, from, next) => {
   // Admin or Manager required routes
   if (to.matched.some(record => record.meta.requiresAdminOrManager)) {
     if (!auth.user) return next(isMobile ? { name: 'MobileLogin', query: { redirect: to.fullPath } } : { name: 'Login', query: { redirect: to.fullPath } })
-    if (!auth.isAdmin && !auth.isManager) return next(isMobile ? { name: 'MobileHome' } : { name: 'Home' })
+    if (!auth.isAdmin && !auth.isManager) {
+      alert('접근 권한이 없습니다. (관리자 또는 자산담당자 전용)')
+      return next(isMobile ? { name: 'MobileHome' } : { name: 'Home' })
+    }
   }
 
   // Specific Admin-required routes
