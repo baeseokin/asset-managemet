@@ -56,7 +56,7 @@
               <router-link v-for="item in allMenuItems" :key="item.name"
                 :to="item.path" @click="isDrawerOpen = false"
                 class="flex items-center gap-3 text-sm font-semibold text-slate-600 py-3.5 px-4 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all"
-                active-class="bg-indigo-50 text-indigo-650 font-bold">
+                exact-active-class="bg-indigo-50 text-indigo-600 font-bold">
                 <component :is="item.icon" class="w-5 h-5 text-slate-400" />
                 {{ item.name }}
               </router-link>
