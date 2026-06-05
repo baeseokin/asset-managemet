@@ -124,10 +124,11 @@ onMounted(() => {
           </p>
         </div>
 
-        <div class="flex items-center gap-2 shrink-0">
-          <button @click="loadDashboardData" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-400 hover:text-slate-800 rounded-xl transition-all shadow-md">
-            <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': isLoading }" />
-          </button>
+        <div v-if="auth.isAdmin || auth.isManager" class="flex items-center gap-2 shrink-0">
+          <router-link to="/home/admin-assets?action=register" class="btn-primary flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold shadow-indigo-600/20 w-full md:w-auto justify-center">
+            <Package class="w-5 h-5" />
+            신규 자산 등록
+          </router-link>
         </div>
       </div>
     </div>
@@ -252,10 +253,6 @@ onMounted(() => {
             <Briefcase class="w-5 h-5 text-indigo-600" />
             <h2 class="text-lg font-black text-slate-900">자산 담당자 현황판 (관리부)</h2>
           </div>
-          <router-link to="/home/admin-assets?action=register" class="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
-            <Package class="w-4 h-4" />
-            신규 자산 등록
-          </router-link>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">

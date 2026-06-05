@@ -29,25 +29,6 @@ const isLoading = ref(false)
 const adminStats = ref(null)
 const managerStats = ref(null)
 
-const countdown = ref(60)
-let timer = null
-
-const startTimer = () => {
-  if (timer) clearInterval(timer)
-  countdown.value = 60
-  timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      loadDashboardData()
-      countdown.value = 60
-    }
-  }, 1000)
-}
-
-const manualRefresh = () => {
-  loadDashboardData()
-  countdown.value = 60
-}
 
 const getCategoryIcon = (type) => {
   if (type === '방송 장비') return Laptop
@@ -118,11 +99,6 @@ const loadDashboardData = async () => {
 
 onMounted(() => {
   loadDashboardData()
-  startTimer()
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
 })
 </script>
 
@@ -149,13 +125,11 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <div class="flex items-center gap-2.5 shrink-0">
-          <span class="text-[11px] text-slate-400 font-bold bg-white/85 border border-slate-200 px-2.5 py-2 rounded-xl shadow-sm tabular-nums flex items-center">
-            {{ countdown }}초 후 자동 갱신
-          </span>
-          <button @click="manualRefresh" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-400 hover:text-slate-800 rounded-xl transition-all shadow-md">
-            <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': isLoading }" />
-          </button>
+        <div v-if="auth.isAdmin || auth.isManager" class="flex items-center gap-2 shrink-0">
+          <router-link to="/m/home/admin-assets?action=register" class="btn-primary flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold shadow-indigo-600/20 w-full md:w-auto justify-center">
+            <Package class="w-5 h-5" />
+            신규 자산 등록
+          </router-link>
         </div>
       </div>
     </div>
@@ -280,10 +254,6 @@ onUnmounted(() => {
             <Briefcase class="w-5 h-5 text-indigo-600" />
             <h2 class="text-lg font-black text-slate-900">자산 담당자 현황판 (관리부)</h2>
           </div>
-          <router-link to="/m/home/admin-assets?action=register" class="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
-            <Package class="w-4 h-4" />
-            신규 자산 등록
-          </router-link>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
