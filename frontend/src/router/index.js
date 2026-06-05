@@ -234,6 +234,10 @@ router.beforeEach(async (to, from, next) => {
   if (to.matched.some(record => record.meta.requiresAdminOrManager)) {
     if (!auth.user) return next(isMobile ? { name: 'MobileLogin', query: { redirect: to.fullPath } } : { name: 'Login', query: { redirect: to.fullPath } })
     if (!auth.isAdmin && !auth.isManager) {
+      // 일반사용자가 QR 코드 스캔 등으로 자산정보관리 화면에 접근했을 때, 자산목록으로 우회시켜 상세정보 팝업을 볼 수 있게 함
+      if ((to.name === 'AdminAssets' || to.name === 'MobileAdminAssets') && to.query.search) {
+        return next(isMobile ? { name: 'MobileAssets', query: to.query } : { name: 'Assets', query: to.query })
+      }
       alert('접근 권한이 없습니다. (관리자 또는 자산담당자 전용)')
       return next(isMobile ? { name: 'MobileHome' } : { name: 'Home' })
     }
