@@ -535,6 +535,7 @@ const addMaintenanceLog = async () => {
     const res = await axios.post(`/api/assets/${selectedMaintenanceAsset.value.id}/maintenance`, form)
     if (res.data.success) {
       modal.showAlert('정비 내역이 등록되었습니다.')
+      showMaintenanceModal.value = false
       fetchMaintenanceHistory(selectedMaintenanceAsset.value.id)
       fetchAssets()
     }
