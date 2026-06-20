@@ -123,7 +123,6 @@ const navItems = computed(() => {
     items.push({ name: '사용자 권한 관리', path: '/home/users' })
   }
 
-  items.push({ name: '내 정보', path: '/home/profile' })
   return items
 })
 </script>

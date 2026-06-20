@@ -145,16 +145,12 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Department Selector -->
+            <!-- Department Selector (Disabled) -->
             <div class="space-y-1.5">
               <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">소속 부서</label>
-              <div class="relative flex items-center">
+              <div class="relative flex items-center opacity-70">
                 <Building class="w-5 h-5 text-slate-400 absolute left-3.5" />
-                <select v-model="profile.dept_name" class="input-field pl-11 appearance-none cursor-pointer">
-                  <option value="">부서 미지정</option>
-                  <option v-for="dept in departments" :key="dept.id" :value="dept.dept_name" class="bg-white text-slate-250">{{ dept.dept_name }}</option>
-                </select>
-                <ChevronDown class="w-4 h-4 text-slate-400 absolute right-4 pointer-events-none" />
+                <input type="text" :value="profile.dept_name || '부서 미지정'" disabled class="input-field pl-11 cursor-not-allowed" />
               </div>
             </div>
 
