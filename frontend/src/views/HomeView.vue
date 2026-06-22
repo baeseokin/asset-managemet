@@ -372,7 +372,7 @@ onMounted(() => {
               <router-link 
                 v-for="item in managerStats.maintenanceAssets" 
                 :key="item.id" 
-                :to="`/home/admin-assets?search=${item.item_code}`" 
+                :to="`/home/admin-assets?status=under_maintenance&search=${item.item_code}`" 
                 class="block p-3 bg-slate-50/60 rounded-xl border border-slate-200 flex items-center justify-between hover:border-indigo-500/50 hover:bg-white transition-all group"
               >
                 <div>

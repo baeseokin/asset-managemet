@@ -44,7 +44,7 @@
           <div class="absolute right-0 top-0 w-4/5 max-w-xs h-full bg-white border-l border-slate-200 p-5 flex flex-col gap-6" @click.stop>
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-2">
-                <Shield class="w-5 h-5 text-indigo-600" />
+                <Shield class="w-5 h-5 text-blue-500" />
                 <span class="font-bold text-base text-slate-900">전체 메뉴</span>
               </div>
               <button @click="isDrawerOpen = false" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400">
@@ -55,9 +55,11 @@
             <nav class="flex-1 space-y-1.5 overflow-y-auto">
               <router-link v-for="item in allMenuItems" :key="item.name"
                 :to="item.path" @click="isDrawerOpen = false"
-                class="flex items-center gap-3 text-sm font-semibold text-slate-600 py-3.5 px-4 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all"
-                exact-active-class="bg-indigo-50 text-indigo-600 font-bold">
-                <component :is="item.icon" class="w-5 h-5 text-slate-400" />
+                :class="[
+                  'flex items-center gap-3 text-sm py-3.5 px-4 rounded-xl transition-all',
+                  route.path === item.path ? 'bg-blue-50 text-blue-500 font-bold' : 'font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                ]">
+                <component :is="item.icon" :class="route.path === item.path ? 'text-blue-500' : 'text-slate-400'" class="w-5 h-5" />
                 {{ item.name }}
               </router-link>
             </nav>
@@ -97,8 +99,10 @@
         <router-link 
           v-if="item.path" 
           :to="item.path"
-          exact-active-class="text-indigo-600 font-bold"
-          class="flex flex-col items-center justify-center py-1 px-3 text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-colors"
+          :class="[
+            'flex flex-col items-center justify-center py-1 px-3 text-[10px] transition-colors',
+            route.path === item.path ? 'text-blue-500 font-bold' : 'font-semibold text-slate-400 hover:text-slate-600'
+          ]"
         >
           <component :is="item.icon" class="w-5.5 h-5.5 mb-1" />
           <span>{{ item.name }}</span>
@@ -106,7 +110,10 @@
         <button 
           v-else
           @click="item.action()"
-          class="flex flex-col items-center justify-center py-1 px-3 text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+          :class="[
+            'flex flex-col items-center justify-center py-1 px-3 text-[10px] transition-colors focus:outline-none',
+            item.isDrawer && isDrawerItemActive ? 'text-blue-500 font-bold' : 'font-semibold text-slate-400 hover:text-slate-600'
+          ]"
         >
           <component :is="item.icon" class="w-5.5 h-5.5 mb-1" />
           <span>{{ item.name }}</span>
@@ -159,10 +166,16 @@ const bottomNavItems = computed(() => {
     items.push({
       name: '전체 메뉴',
       icon: Menu,
-      action: () => { isDrawerOpen.value = true }
+      action: () => { isDrawerOpen.value = true },
+      isDrawer: true
     })
   }
   return items
+})
+
+const isDrawerItemActive = computed(() => {
+  const bottomPaths = bottomNavItems.value.map(item => item.path).filter(Boolean)
+  return !bottomPaths.includes(route.path)
 })
 
 const allMenuItems = computed(() => {
@@ -197,16 +210,4 @@ const allMenuItems = computed(() => {
 })
 </script>
 
-<style scoped>
-/* Bottom navigation overrides */
-.router-link-active {
-  color: rgb(79, 70, 229);
-}
-</style>
 
-<style scoped>
-/* Bottom navigation overrides */
-.router-link-active {
-  color: rgb(79, 70, 229);
-}
-</style>
