@@ -118,27 +118,31 @@ router.patch("/:id/approve", isLogged, isAdmin, async (req, res) => {
     const data = JSON.parse(request.requested_data);
 
     if (request.request_type === 'register') {
-      // Insert new asset
-      const [result] = await conn.query(
-        `INSERT INTO assets (
-          asset_name, category_name, serial_number, item_code, purchase_date, 
-          purchase_price, purchase_source, receipt_image_url, useful_life_years, 
-          is_consumable, stock_quantity, location, dept_name, manager_name, 
-          manager_contact, image_url, description, status
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')`,
-        [
-          data.asset_name, data.category_name, data.serial_number || null, data.item_code || null, data.purchase_date || null,
-          data.purchase_price ? parseFloat(data.purchase_price) : null, data.purchase_source || null, data.receipt_image_url || null, 
-          data.useful_life_years ? parseInt(data.useful_life_years) : 5, data.is_consumable ? 1 : 0, data.stock_quantity ? parseInt(data.stock_quantity) : 0,
-          data.location || null, data.dept_name || '관리부', data.manager_name || '', data.manager_contact || '',
-          data.image_url || null, data.description || null
-        ]
-      );
-      
-      const newAssetId = result.insertId;
+      let newAssetId = request.asset_id;
 
-      // Update change request to include new asset ID
-      await conn.query("UPDATE asset_change_requests SET asset_id = ? WHERE id = ?", [newAssetId, id]);
+      if (newAssetId) {
+        // Asset is already in assets table as pending_approval
+        await conn.query("UPDATE assets SET status = 'available' WHERE id = ?", [newAssetId]);
+      } else {
+        // Fallback for old requests
+        const [result] = await conn.query(
+          `INSERT INTO assets (
+            asset_name, category_name, serial_number, item_code, purchase_date, 
+            purchase_price, purchase_source, receipt_image_url, useful_life_years, 
+            is_consumable, stock_quantity, location, dept_name, manager_name, 
+            manager_contact, image_url, description, status
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')`,
+          [
+            data.asset_name, data.category_name, data.serial_number || null, data.item_code || null, data.purchase_date || null,
+            data.purchase_price ? parseFloat(data.purchase_price) : null, data.purchase_source || null, data.receipt_image_url || null, 
+            data.useful_life_years ? parseInt(data.useful_life_years) : 5, data.is_consumable ? 1 : 0, data.stock_quantity ? parseInt(data.stock_quantity) : 0,
+            data.location || null, data.dept_name || '관리부', data.manager_name || '', data.manager_contact || '',
+            data.image_url || null, data.description || null
+          ]
+        );
+        newAssetId = result.insertId;
+        await conn.query("UPDATE asset_change_requests SET asset_id = ? WHERE id = ?", [newAssetId, id]);
+      }
 
       // Log in history
       await conn.query(
@@ -227,17 +231,21 @@ router.patch("/:id/reject", isLogged, isAdmin, async (req, res) => {
       return res.status(400).json({ success: false, message: "이미 처리된 요청입니다." });
     }
 
-    await conn.query(
-      "UPDATE asset_change_requests SET status = 'rejected', reject_reason = ? WHERE id = ?",
-      [reject_reason, id]
-    );
-
-    if (request.asset_id) {
+    if (request.request_type === 'register' && request.asset_id) {
+      // Unlink to prevent cascade delete of the request, then delete the temporary asset
+      await conn.query("UPDATE asset_change_requests SET asset_id = NULL WHERE id = ?", [id]);
+      await conn.query("DELETE FROM assets WHERE id = ?", [request.asset_id]);
+    } else if (request.asset_id) {
       await conn.query(
         "INSERT INTO asset_history (asset_id, user_id, user_name, action_type, description) VALUES (?, ?, ?, 'status_changed', ?)",
         [request.asset_id, req.session.user.id, req.session.user.userName, `자산 변경 요청 반려: 사유 (${reject_reason})`]
       );
     }
+
+    await conn.query(
+      "UPDATE asset_change_requests SET status = 'rejected', reject_reason = ? WHERE id = ?",
+      [reject_reason, id]
+    );
 
     await conn.commit();
     res.json({ success: true });

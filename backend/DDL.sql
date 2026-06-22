@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS `assets` (
   `manager_name` varchar(100) DEFAULT NULL,
   `manager_contact` varchar(50) DEFAULT NULL,
   `image_url` varchar(255) DEFAULT NULL,
+  `manufacturer` varchar(100) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),

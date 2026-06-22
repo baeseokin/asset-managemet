@@ -160,7 +160,7 @@ router.post("/", isLogged, hasWriteAccess, upload.single("image"), async (req, r
   const {
     asset_name, category_name, serial_number, item_code, purchase_date,
     purchase_price, purchase_source, receipt_image_url, useful_life_years,
-    is_consumable, stock_quantity, location, dept_name, manager_name, manager_contact, description
+    is_consumable, stock_quantity, location, dept_name, manager_name, manager_contact, manufacturer, description
   } = req.body;
 
   const data = {
@@ -180,6 +180,7 @@ router.post("/", isLogged, hasWriteAccess, upload.single("image"), async (req, r
     manager_name: manager_name || user.userName,
     manager_contact: manager_contact || user.phone,
     image_url,
+    manufacturer,
     description
   };
 
@@ -194,13 +195,13 @@ router.post("/", isLogged, hasWriteAccess, upload.single("image"), async (req, r
           asset_name, category_name, serial_number, item_code, purchase_date, 
           purchase_price, purchase_source, receipt_image_url, useful_life_years, 
           is_consumable, stock_quantity, location, dept_name, manager_name, 
-          manager_contact, image_url, description, status
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')`,
+          manager_contact, image_url, manufacturer, description, status
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')`,
         [
           data.asset_name, data.category_name, data.serial_number, data.item_code, data.purchase_date,
           data.purchase_price, data.purchase_source, data.receipt_image_url, data.useful_life_years,
           data.is_consumable, data.stock_quantity, data.location, data.dept_name, data.manager_name,
-          data.manager_contact, data.image_url, data.description
+          data.manager_contact, data.image_url, data.manufacturer, data.description
         ]
       );
       
@@ -222,23 +223,84 @@ router.post("/", isLogged, hasWriteAccess, upload.single("image"), async (req, r
     }
   } else {
     // Asset Manager: insert as pending approval request
+    const conn = await pool.getConnection();
     try {
-      const [result] = await pool.query(
-        "INSERT INTO asset_change_requests (request_type, asset_id, requester_id, requested_data, status) VALUES ('register', NULL, ?, ?, 'pending')",
-        [user.id, JSON.stringify(data)]
+      await conn.beginTransaction();
+
+      const [assetResult] = await conn.query(
+        `INSERT INTO assets (
+          asset_name, category_name, serial_number, item_code, purchase_date, 
+          purchase_price, purchase_source, receipt_image_url, useful_life_years, 
+          is_consumable, stock_quantity, location, dept_name, manager_name, 
+          manager_contact, image_url, manufacturer, description, status
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval')`,
+        [
+          data.asset_name, data.category_name, data.serial_number || null, data.item_code || null, data.purchase_date || null,
+          data.purchase_price, data.purchase_source, data.receipt_image_url, data.useful_life_years,
+          data.is_consumable, data.stock_quantity, data.location, data.dept_name, data.manager_name,
+          data.manager_contact, data.image_url, data.manufacturer, data.description
+        ]
       );
+      
+      const newAssetId = assetResult.insertId;
+
+      const [result] = await conn.query(
+        "INSERT INTO asset_change_requests (request_type, asset_id, requester_id, requested_data, status) VALUES ('register', ?, ?, ?, 'pending')",
+        [newAssetId, user.id, JSON.stringify(data)]
+      );
+
+      await conn.commit();
       res.json({ success: true, id: result.insertId, direct: false, message: "등록 결재 요청이 재정부에 제출되었습니다." });
     } catch (err) {
+      await conn.rollback();
       console.error("Create registration request error:", err);
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, message: err.code === 'ER_DUP_ENTRY' ? "이미 등록된 시리얼 번호 혹은 물품 코드입니다." : err.message });
+    } finally {
+      conn.release();
     }
   }
 });
 
 /**
+ * Update an asset's status directly
+ */
+router.patch("/:id/status", isLogged, hasWriteAccess, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const user = req.session.user;
+
+  if (!status) return res.status(400).json({ success: false, message: "상태 값이 필요합니다." });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [current] = await conn.query("SELECT status FROM assets WHERE id = ?", [id]);
+    if (current.length === 0) throw new Error("자산을 찾을 수 없습니다.");
+
+    const oldStatus = current[0].status;
+
+    await conn.query("UPDATE assets SET status = ? WHERE id = ?", [status, id]);
+
+    await conn.query(
+      "INSERT INTO asset_history (asset_id, user_id, user_name, action_type, description) VALUES (?, ?, ?, 'status_changed', ?)",
+      [id, user.id, user.userName, `자산 상태 변경: ${oldStatus} ➔ ${status}`]
+    );
+
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    console.error("Patch status error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+/**
  * Update an asset
- * - Admins update directly.
- * - Asset Managers submit a change request.
+ * - All users with write access update directly without approval.
  */
 router.put("/:id", isLogged, hasWriteAccess, upload.single("image"), async (req, res) => {
   const { id } = req.params;
@@ -248,7 +310,7 @@ router.put("/:id", isLogged, hasWriteAccess, upload.single("image"), async (req,
   const {
     asset_name, category_name, serial_number, item_code, purchase_date,
     purchase_price, purchase_source, receipt_image_url, useful_life_years,
-    is_consumable, stock_quantity, location, dept_name, manager_name, manager_contact, description, status
+    is_consumable, stock_quantity, location, dept_name, manager_name, manager_contact, manufacturer, description, status
   } = req.body;
 
   // Retrieve current asset state to check for changes
@@ -279,65 +341,51 @@ router.put("/:id", isLogged, hasWriteAccess, upload.single("image"), async (req,
     manager_name: manager_name !== undefined ? manager_name : current[0].manager_name,
     manager_contact: manager_contact !== undefined ? manager_contact : current[0].manager_contact,
     image_url,
+    manufacturer: manufacturer !== undefined ? manufacturer : current[0].manufacturer,
     description: description !== undefined ? description : current[0].description,
     status: status || current[0].status
   };
 
-  if (user.roles.includes("관리자")) {
-    // Admin: direct update
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
 
+    await conn.query(
+      `UPDATE assets SET 
+        asset_name = ?, category_name = ?, serial_number = ?, item_code = ?, purchase_date = ?, 
+        purchase_price = ?, purchase_source = ?, receipt_image_url = ?, useful_life_years = ?, 
+        is_consumable = ?, stock_quantity = ?, location = ?, dept_name = ?, manager_name = ?, 
+        manager_contact = ?, image_url = ?, manufacturer = ?, description = ?, status = ?
+       WHERE id = ?`,
+      [
+        data.asset_name, data.category_name, data.serial_number, data.item_code, data.purchase_date,
+        data.purchase_price, data.purchase_source, data.receipt_image_url, data.useful_life_years,
+        data.is_consumable, data.stock_quantity, data.location, data.dept_name, data.manager_name,
+        data.manager_contact, data.image_url, data.manufacturer, data.description, data.status, id
+      ]
+    );
+
+    // Log status changes or update info
+    if (current[0].status !== data.status) {
       await conn.query(
-        `UPDATE assets SET 
-          asset_name = ?, category_name = ?, serial_number = ?, item_code = ?, purchase_date = ?, 
-          purchase_price = ?, purchase_source = ?, receipt_image_url = ?, useful_life_years = ?, 
-          is_consumable = ?, stock_quantity = ?, location = ?, dept_name = ?, manager_name = ?, 
-          manager_contact = ?, image_url = ?, description = ?, status = ?
-         WHERE id = ?`,
-        [
-          data.asset_name, data.category_name, data.serial_number, data.item_code, data.purchase_date,
-          data.purchase_price, data.purchase_source, data.receipt_image_url, data.useful_life_years,
-          data.is_consumable, data.stock_quantity, data.location, data.dept_name, data.manager_name,
-          data.manager_contact, data.image_url, data.description, data.status, id
-        ]
+        "INSERT INTO asset_history (asset_id, user_id, user_name, action_type, description) VALUES (?, ?, ?, 'status_changed', ?)",
+        [id, user.id, user.userName, `자산 상태 변경: ${current[0].status} ➔ ${data.status}`]
       );
-
-      // Log status changes or update info
-      if (current[0].status !== data.status) {
-        await conn.query(
-          "INSERT INTO asset_history (asset_id, user_id, user_name, action_type, description) VALUES (?, ?, ?, 'status_changed', ?)",
-          [id, user.id, user.userName, `자산 상태 변경: ${current[0].status} ➔ ${data.status}`]
-        );
-      } else {
-        await conn.query(
-          "INSERT INTO asset_history (asset_id, user_id, user_name, action_type, description) VALUES (?, ?, ?, 'updated', ?)",
-          [id, user.id, user.userName, "자산 정보가 최고 관리자에 의해 직접 수정되었습니다."]
-        );
-      }
-
-      await conn.commit();
-      res.json({ success: true, direct: true });
-    } catch (err) {
-      await conn.rollback();
-      console.error("Update asset error:", err);
-      res.status(500).json({ success: false, error: err.message });
-    } finally {
-      conn.release();
-    }
-  } else {
-    // Asset Manager: request modification approval
-    try {
-      const [result] = await pool.query(
-        "INSERT INTO asset_change_requests (request_type, asset_id, requester_id, requested_data, status) VALUES ('modify', ?, ?, ?, 'pending')",
-        [id, user.id, JSON.stringify(data)]
+    } else {
+      await conn.query(
+        "INSERT INTO asset_history (asset_id, user_id, user_name, action_type, description) VALUES (?, ?, ?, 'updated', ?)",
+        [id, user.id, user.userName, "자산 정보가 수정되었습니다."]
       );
-      res.json({ success: true, id: result.insertId, direct: false, message: "수정 결재 요청이 재정부에 제출되었습니다." });
-    } catch (err) {
-      console.error("Create modification request error:", err);
-      res.status(500).json({ success: false, error: err.message });
     }
+
+    await conn.commit();
+    res.json({ success: true, direct: true });
+  } catch (err) {
+    await conn.rollback();
+    console.error("Update asset error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  } finally {
+    conn.release();
   }
 });
 
@@ -422,6 +470,12 @@ router.post("/:id/maintenance", isLogged, hasWriteAccess, async (req, res) => {
       `INSERT INTO asset_history (asset_id, user_id, user_name, action_type, description)
        VALUES (?, ?, ?, 'repaired', ?)`,
       [id, req.session.user.id, req.session.user.userName, `A/S 정비 기록 등록: ${maintenance_type || '수리'} (${maintenance_date}) - 비용: ${cost || 0}원`]
+    );
+
+    // Update status to available
+    await conn.query(
+      `UPDATE assets SET status = 'available' WHERE id = ?`,
+      [id]
     );
 
     await conn.commit();

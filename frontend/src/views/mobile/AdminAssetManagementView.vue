@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import QrcodeVue from 'qrcode.vue'
+import Tesseract from 'tesseract.js'
 import { useAuthStore } from '@/store/auth'
 import { useModalStore } from '@/store/useModalStore'
 import { 
@@ -30,7 +31,8 @@ import {
   Eye,
   Receipt,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ScanText
 } from 'lucide-vue-next'
 
 const auth = useAuthStore()
@@ -41,7 +43,8 @@ const router = useRouter()
 // Filter states
 const selectedDeptFilter = ref('')
 const selectedCategoryFilter = ref('')
-const selectedStatusFilter = ref('')
+const selectedLocationFilter = ref('')
+const selectedStatusFilter = ref('available')
 const showLowStockOnly = ref(false)
 
 // Data States
@@ -64,6 +67,7 @@ const assetForm = ref({
   category_name: '',
   serial_number: '',
   item_code: '',
+  manufacturer: '',
   purchase_date: '',
   purchase_price: '',
   purchase_source: '',
@@ -172,7 +176,8 @@ const loadAllData = async () => {
 const parseRouteQuery = () => {
   selectedDeptFilter.value = route.query.dept || ''
   selectedCategoryFilter.value = route.query.category || ''
-  selectedStatusFilter.value = route.query.status || ''
+  selectedLocationFilter.value = route.query.location || ''
+  selectedStatusFilter.value = route.query.status || 'available'
   showLowStockOnly.value = route.query.filter === 'low_stock'
   assetSearch.value = route.query.search || ''
 
@@ -213,6 +218,16 @@ const clearAllQueryFilters = () => {
   router.push({ query: {} })
 }
 
+const updateQuery = (key, value) => {
+  const query = { ...route.query }
+  if (value) {
+    query[key] = value
+  } else {
+    delete query[key]
+  }
+  router.push({ query })
+}
+
 // Filter assets based on search query
 const filteredAssets = computed(() => {
   let list = assets.value
@@ -223,7 +238,10 @@ const filteredAssets = computed(() => {
   if (selectedCategoryFilter.value) {
     list = list.filter(a => a.category_name === selectedCategoryFilter.value)
   }
-  if (selectedStatusFilter.value) {
+  if (selectedLocationFilter.value) {
+    list = list.filter(a => a.location === selectedLocationFilter.value)
+  }
+  if (selectedStatusFilter.value && selectedStatusFilter.value !== 'all') {
     list = list.filter(a => a.status === selectedStatusFilter.value)
   }
   if (showLowStockOnly.value) {
@@ -259,6 +277,7 @@ const getStatusLabel = (status) => {
   if (status === 'under_maintenance') return '수리 중'
   if (status === 'disposed') return '폐기됨'
   if (status === 'lost') return '분실됨'
+  if (status === 'pending_approval') return '승인 대기'
   return status
 }
 
@@ -266,6 +285,9 @@ const getStatusBadgeClass = (status) => {
   if (status === 'available') return 'bg-emerald-500/10 text-emerald-650 border-emerald-500/20'
   if (status === 'in_use') return 'bg-indigo-500/10 text-indigo-600 border-indigo-200'
   if (status === 'under_maintenance') return 'bg-amber-50 text-amber-600 border-amber-500/20'
+  if (status === 'disposed') return 'bg-rose-50 text-rose-600 border-rose-500/20'
+  if (status === 'lost') return 'bg-rose-50 text-rose-600 border-rose-500/20'
+  if (status === 'pending_approval') return 'bg-amber-50 text-amber-600 border-amber-500/20'
   return 'bg-slate-100 text-slate-400 border-slate-300'
 }
 
@@ -290,14 +312,82 @@ const getRequestStatusClass = (status) => {
 
 // Asset CRUD Operations
 const fileInput = ref(null)
-const cameraInput = ref(null)
 const imagePreviewUrl = ref(null)
 
-const handleImageChange = (e) => {
+const handleImageChange = async (e) => {
   const file = e.target.files[0]
   if (file) {
     selectedImageFile.value = file
     imagePreviewUrl.value = URL.createObjectURL(file)
+  }
+}
+
+const ocrInput = ref(null)
+const isOcrLoading = ref(false)
+const ocrResults = ref([])
+
+const handleOcrScan = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+
+  isOcrLoading.value = true
+  ocrResults.value = []
+  
+  try {
+    const result = await Tesseract.recognize(file, 'eng+kor', {
+      logger: m => console.log(m)
+    })
+    
+    // Split by newlines and filter empty
+    const lines = result.data.text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+    
+    const analyzedLines = []
+    lines.forEach(line => {
+      let recommendation = null
+      let cleanText = line
+      const upperLine = line.toUpperCase()
+      
+      const manufacturers = ['SAMSUNG', 'APPLE', 'LG', 'SHURE', 'SONY', 'DELL', 'HP', 'LENOVO', 'ASUS', 'LOGITECH', '삼성', '엘지', '애플', '소니', '로지텍', '주식회사', 'INC', 'CORP']
+      
+      const snMatch = upperLine.match(/(?:S\/N|SN|SERIAL\s*NO|SERIAL)[\s:;\-\.]*([A-Z0-9\-]+)/)
+      const codeMatch = upperLine.match(/(?:MODEL|P\/N|PN|CODE|모델명|모델)[\s:;\-\.]*([A-Z0-9\-]+)/)
+
+      if (snMatch && snMatch[1].length >= 4) {
+        recommendation = 'sn'
+        cleanText = snMatch[1]
+      } else if (codeMatch && codeMatch[1].length >= 3) {
+        recommendation = 'item_code'
+        cleanText = codeMatch[1]
+      } else if (manufacturers.some(m => upperLine.includes(m))) {
+        recommendation = 'manufacturer'
+      } else if (/^[A-Z0-9\-]{8,20}$/.test(upperLine) && !upperLine.includes(' ')) {
+        recommendation = 'sn'
+      } else if (/^[A-Z0-9\-]{4,15}$/.test(upperLine) && !upperLine.includes(' ')) {
+        recommendation = 'item_code'
+      }
+
+      if (!analyzedLines.some(a => a.text === cleanText)) {
+        analyzedLines.push({ text: cleanText, recommendation })
+      }
+    })
+
+    ocrResults.value = analyzedLines
+  } catch (err) {
+    modal.showAlert('텍스트 추출 중 오류가 발생했습니다.')
+    console.error('OCR Error:', err)
+  } finally {
+    isOcrLoading.value = false
+    e.target.value = ''
+  }
+}
+
+const assignOcrText = (text, field) => {
+  if (field === 'sn') {
+    assetForm.value.serial_number = text
+  } else if (field === 'item_code') {
+    assetForm.value.item_code = text
+  } else if (field === 'manufacturer') {
+    assetForm.value.manufacturer = text
   }
 }
 
@@ -326,11 +416,13 @@ const openAddAssetModal = () => {
   selectedImageFile.value = null
   imagePreviewUrl.value = null
   removeImageChecked.value = false
+  ocrResults.value = []
   assetForm.value = {
     asset_name: '',
     category_name: categories.value[0]?.category_name || '',
     serial_number: '',
     item_code: '',
+    manufacturer: '',
     purchase_date: new Date().toISOString().split('T')[0],
     purchase_price: '',
     purchase_source: '',
@@ -353,6 +445,7 @@ const openEditAssetModal = (asset) => {
   selectedImageFile.value = null
   imagePreviewUrl.value = asset.image_url || null
   removeImageChecked.value = false
+  ocrResults.value = []
   
   let pDate = ''
   if (asset.purchase_date) {
@@ -364,6 +457,7 @@ const openEditAssetModal = (asset) => {
     category_name: asset.category_name || '',
     serial_number: asset.serial_number || '',
     item_code: asset.item_code || '',
+    manufacturer: asset.manufacturer || '',
     purchase_date: pDate,
     purchase_price: asset.purchase_price || '',
     purchase_source: asset.purchase_source || '',
@@ -559,6 +653,23 @@ const deleteMaintenanceLog = async (id) => {
   }
 }
 
+const markAsMaintenance = async (asset) => {
+  if (await modal.showConfirm(`[${asset.asset_name}] 자산을 '정비 필요(수리/점검 중)' 상태로 전환하시겠습니까?`)) {
+    try {
+      const res = await axios.patch(`/api/assets/${asset.id}/status`, { status: 'under_maintenance' })
+      if (res.data.success) {
+        modal.showAlert('정비 필요 상태로 전환되었습니다.')
+        if (selectedMaintenanceAsset.value && selectedMaintenanceAsset.value.id === asset.id) {
+          selectedMaintenanceAsset.value.status = 'under_maintenance'
+        }
+        fetchAssets()
+      }
+    } catch (err) {
+      modal.showAlert('상태 전환 중 오류가 발생했습니다.')
+    }
+  }
+}
+
 const formatPrice = (val) => {
   if (!val) return '0원'
   return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val)
@@ -568,6 +679,7 @@ const formatPrice = (val) => {
 <template>
   <div class="space-y-6 pb-10 text-slate-800">
     <!-- Header -->
+    <div id="barcode-reader" class="hidden"></div>
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
         <button @click="openAddAssetModal" class="btn-primary flex items-center gap-1 text-xs py-2.5">
@@ -587,14 +699,16 @@ const formatPrice = (val) => {
       <div class="space-y-4">
         <!-- Search bar & Bulk action button -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div class="relative w-full max-w-md">
-            <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input 
-              v-model="assetSearch"
-              type="text" 
-              placeholder="자산명, 물품 코드, 보관 위치, 담당자 검색..." 
-              class="input-field pl-9 py-2 text-xs" 
-            />
+          <div class="flex gap-2 w-full max-w-lg">
+            <div class="relative w-full">
+              <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input 
+                v-model="assetSearch"
+                type="text" 
+                placeholder="자산명, 물품 코드, 보관 위치, 담당자 검색..." 
+                class="input-field pl-9 py-2 text-xs w-full" 
+              />
+            </div>
           </div>
           <div v-if="selectedAssetIds.length > 0" class="shrink-0 animate-in slide-in-from-right duration-250">
             <button 
@@ -607,8 +721,45 @@ const formatPrice = (val) => {
           </div>
         </div>
 
+        <!-- Dropdown Filters -->
+        <div class="flex flex-wrap items-center gap-2">
+          <select 
+            v-model="selectedCategoryFilter" 
+            @change="updateQuery('category', selectedCategoryFilter)" 
+            class="input-field py-2 text-xs w-[calc(50%-0.25rem)] sm:w-32"
+          >
+            <option value="">모든 카테고리</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.category_name">
+              {{ cat.category_name }}
+            </option>
+          </select>
+
+          <select 
+            v-model="selectedLocationFilter" 
+            @change="updateQuery('location', selectedLocationFilter)" 
+            class="input-field py-2 text-xs w-[calc(50%-0.25rem)] sm:w-32"
+          >
+            <option value="">모든 보관위치</option>
+            <option v-for="loc in locations" :key="loc.id" :value="loc.location_name">
+              {{ loc.location_name }}
+            </option>
+          </select>
+
+          <select 
+            v-model="selectedStatusFilter" 
+            @change="updateQuery('status', selectedStatusFilter)" 
+            class="input-field py-2 text-xs w-full sm:w-32"
+          >
+            <option value="all">모든 상태</option>
+            <option value="available">사용 가능</option>
+            <option value="under_maintenance">수리 중</option>
+            <option value="disposed">폐기됨</option>
+            <option value="pending_approval">승인 대기</option>
+          </select>
+        </div>
+
         <!-- Active Filters Display -->
-        <div v-if="selectedDeptFilter || selectedCategoryFilter || selectedStatusFilter || showLowStockOnly" class="flex flex-wrap gap-2 items-center bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 animate-in fade-in duration-200">
+        <div v-if="selectedDeptFilter || selectedCategoryFilter || selectedLocationFilter || (selectedStatusFilter && selectedStatusFilter !== 'all') || showLowStockOnly" class="flex flex-wrap gap-2 items-center bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 animate-in fade-in duration-200">
           <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">적용된 필터:</span>
           
           <span v-if="selectedDeptFilter" class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-650 border border-indigo-200/50 px-2.5 py-1 rounded-lg text-[10px] font-bold">
@@ -621,9 +772,14 @@ const formatPrice = (val) => {
             <button @click="clearQueryFilter('category')" class="hover:text-indigo-800 focus:outline-none"><X class="w-3.5 h-3.5" /></button>
           </span>
 
-          <span v-if="selectedStatusFilter" class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 border border-amber-500/20 px-2.5 py-1 rounded-lg text-[10px] font-bold">
+          <span v-if="selectedLocationFilter" class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-650 border border-indigo-200/50 px-2.5 py-1 rounded-lg text-[10px] font-bold">
+            보관위치: {{ selectedLocationFilter }}
+            <button @click="clearQueryFilter('location')" class="hover:text-indigo-800 focus:outline-none"><X class="w-3.5 h-3.5" /></button>
+          </span>
+
+          <span v-if="selectedStatusFilter && selectedStatusFilter !== 'all'" class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 border border-amber-500/20 px-2.5 py-1 rounded-lg text-[10px] font-bold">
             상태: {{ getStatusLabel(selectedStatusFilter) }}
-            <button @click="clearQueryFilter('status')" class="hover:text-amber-850 focus:outline-none"><X class="w-3.5 h-3.5" /></button>
+            <button @click="updateQuery('status', 'all')" class="hover:text-amber-850 focus:outline-none"><X class="w-3.5 h-3.5" /></button>
           </span>
 
           <span v-if="showLowStockOnly" class="inline-flex items-center gap-1.5 bg-rose-50 text-rose-600 border border-rose-500/20 px-2.5 py-1 rounded-lg text-[10px] font-bold">
@@ -705,6 +861,7 @@ const formatPrice = (val) => {
                 >
                   <Eye class="w-3.5 h-3.5" />
                 </button>
+
                 <button 
                   @click="openMaintenanceModal(asset)"
                   class="p-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 active:bg-slate-100"
@@ -772,31 +929,107 @@ const formatPrice = (val) => {
           <!-- Form Body -->
           <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
             
+            <!-- Image Upload (Moved to top) -->
+            <div class="space-y-2 pb-3 border-b border-slate-200">
+              <label class="block font-bold text-slate-400">자산 실물 사진 등록</label>
+              
+              <!-- Hidden inputs -->
+              <input type="file" ref="fileInput" @change="handleImageChange" accept="image/*" class="hidden" />
+              
+              <!-- Custom action buttons -->
+              <div class="mt-1">
+                <button type="button" @click="fileInput.click()" class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-50 active:bg-indigo-100 border border-indigo-100 text-indigo-650 text-xs font-bold rounded-xl transition-all shadow-sm">
+                  <ImageIcon class="w-5 h-5 text-indigo-600" />
+                  사진 촬영 또는 업로드
+                </button>
+              </div>
+
+              <!-- Preview window -->
+              <div v-if="imagePreviewUrl" class="mt-3 relative w-full aspect-[4/3] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center shadow-md animate-in fade-in duration-200">
+                <img :src="imagePreviewUrl" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" @click="openImageZoom(imagePreviewUrl)" title="크게 보기" />
+                <button type="button" @click="clearSelectedImage" class="absolute top-2.5 right-2.5 p-1.5 bg-slate-900/60 hover:bg-slate-900/85 text-white rounded-full transition-colors">
+                  <X class="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div v-if="isEditing && assetForm.image_url" class="flex items-center gap-2 mt-2">
+                <input v-model="removeImageChecked" type="checkbox" id="remove-img" class="rounded text-indigo-600 focus:ring-0 focus:ring-offset-0 bg-white border-slate-300 w-4 h-4" />
+                <label for="remove-img" class="text-slate-400 font-semibold">기존 사진 삭제</label>
+              </div>
+            </div>
+
+            <!-- Mandatory Basic Info -->
             <div class="space-y-1.5">
               <label class="block font-bold text-slate-400">자산 명칭 <span class="text-rose-500">*</span></label>
               <input v-model="assetForm.asset_name" type="text" placeholder="예: SHURE SM58 마이크 2호기" required class="input-field text-xs py-2" />
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-1.5">
-                <label class="block font-bold text-slate-400">카테고리 <span class="text-rose-500">*</span></label>
-                <div class="relative">
-                  <select v-model="assetForm.category_name" required class="input-field text-xs py-2 appearance-none cursor-pointer">
-                    <option v-for="cat in categories" :key="cat.id" :value="cat.category_name">{{ cat.category_name }}</option>
-                  </select>
-                  <ChevronDown class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div class="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <div class="flex flex-col gap-2 mb-2">
+                <div class="flex justify-between items-center">
+                  <label class="block font-bold text-slate-400">식별 정보 및 제조사</label>
+                  <div class="flex gap-2">
+                    <button type="button" @click="ocrInput.click()" class="px-2 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-[10px] font-bold shadow-md flex items-center transition-colors">
+                      <ScanText class="w-3.5 h-3.5 mr-1" />
+                      OCR 스캔
+                    </button>
+                  </div>
+                  <input type="file" ref="ocrInput" @change="handleOcrScan" accept="image/*" class="hidden" />
+                </div>
+                
+                <!-- OCR Results Section -->
+                <div v-if="isOcrLoading" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-lg bg-white">
+                  <div class="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                  <span class="text-[10px] text-slate-400 font-semibold">텍스트 분석 중...</span>
+                </div>
+                <div v-else-if="ocrResults.length > 0" class="p-3 border border-sky-200 rounded-lg bg-sky-50/50 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div class="text-[10px] text-sky-600 font-bold mb-1 flex items-center justify-between">
+                    <span>인식된 텍스트 목록 (항목을 눌러 할당)</span>
+                    <button type="button" @click="ocrResults = []" class="text-slate-400 hover:text-slate-600"><X class="w-3 h-3"/></button>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <div v-for="(item, idx) in ocrResults" :key="idx" class="group relative">
+                      <button type="button" class="px-2 py-1 bg-white border rounded shadow-sm text-[10px] text-slate-700 transition-colors text-left max-w-[200px] truncate flex items-center gap-1" :class="item.recommendation ? 'border-sky-400 bg-sky-50' : 'border-slate-200 hover:border-sky-300 hover:bg-sky-50'" :title="item.text">
+                        {{ item.text }}
+                        <span v-if="item.recommendation === 'manufacturer'" class="bg-purple-100 text-purple-600 px-1 rounded text-[8px] whitespace-nowrap">제조사</span>
+                        <span v-if="item.recommendation === 'sn'" class="bg-emerald-100 text-emerald-600 px-1 rounded text-[8px] whitespace-nowrap">S/N</span>
+                        <span v-if="item.recommendation === 'item_code'" class="bg-amber-100 text-amber-600 px-1 rounded text-[8px] whitespace-nowrap">코드</span>
+                      </button>
+                      <div class="absolute top-full left-0 mt-1 hidden group-hover:flex group-focus-within:flex flex-col bg-slate-800 text-white rounded shadow-xl text-[10px] z-10 w-32 overflow-hidden border border-slate-700">
+                        <button type="button" @click="assignOcrText(item.text, 'manufacturer')" class="px-3 py-2 text-left hover:bg-slate-700 transition-colors">제조사로 할당</button>
+                        <button type="button" @click="assignOcrText(item.text, 'item_code')" class="px-3 py-2 text-left hover:bg-slate-700 transition-colors">물품 코드로 할당</button>
+                        <button type="button" @click="assignOcrText(item.text, 'sn')" class="px-3 py-2 text-left hover:bg-slate-700 transition-colors">시리얼 번호로 할당</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="space-y-1.5">
-                <label class="block font-bold text-slate-400">시리얼 번호</label>
-                <input v-model="assetForm.serial_number" type="text" placeholder="제조사 고유 시리얼" class="input-field text-xs py-2" />
+
+              <div class="space-y-1">
+                <span class="text-[10px] text-slate-400 font-semibold">제조사</span>
+                <input v-model="assetForm.manufacturer" type="text" placeholder="예: 삼성전자, Apple, SHURE" class="input-field text-xs py-2 bg-white" />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                  <span class="text-[10px] text-slate-400 font-semibold">물품 코드</span>
+                  <input v-model="assetForm.item_code" type="text" placeholder="직접입력" class="input-field text-xs py-2 bg-white" />
+                </div>
+                <div class="space-y-1">
+                  <span class="text-[10px] text-slate-400 font-semibold">시리얼 번호 (S/N)</span>
+                  <input v-model="assetForm.serial_number" type="text" placeholder="직접입력" class="input-field text-xs py-2 bg-white" />
+                </div>
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-1.5">
-                <label class="block font-bold text-slate-400">물품 코드 (바코드/QR 연동)</label>
-                <input v-model="assetForm.item_code" type="text" placeholder="비워둘 시 자동 생성" class="input-field text-xs py-2" />
+                <label class="block font-bold text-slate-400">보관/배치 위치 <span class="text-rose-500">*</span></label>
+                <div class="relative">
+                  <select v-model="assetForm.location" required class="input-field text-xs py-2 appearance-none cursor-pointer">
+                    <option v-for="loc in locations" :key="loc.id" :value="loc.location_name">{{ loc.location_name }}</option>
+                  </select>
+                  <ChevronDown class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
               <div class="space-y-1.5">
                 <label class="block font-bold text-slate-400">내용연수 (연)</label>
@@ -804,20 +1037,37 @@ const formatPrice = (val) => {
               </div>
             </div>
 
-            <!-- Consumables flags -->
-            <div class="p-3 bg-slate-50/60 border border-slate-200 rounded-xl flex items-center justify-between">
-              <div>
-                <label class="font-bold text-slate-350">배터리 등 소모품으로 분류</label>
-                <p class="text-[10px] text-slate-400">대시보드에 재고량 위험 알림이 발동됩니다.</p>
-              </div>
-              <div class="flex items-center gap-3">
-                <input v-model="assetForm.is_consumable" type="checkbox" id="is_consumable" class="rounded text-indigo-600 focus:ring-0 focus:ring-offset-0 bg-white border-slate-300 w-4 h-4" />
-                <input v-if="assetForm.is_consumable" v-model="assetForm.stock_quantity" type="number" placeholder="재고 수량" class="input-field text-xs py-1.5 w-20 text-center" />
+            <div class="space-y-1.5">
+              <label class="block font-bold text-slate-400">소유/관리 부서 <span class="text-rose-500">*</span></label>
+              <div class="relative">
+                <select v-model="assetForm.dept_name" required class="input-field text-xs py-2 appearance-none cursor-pointer">
+                  <option v-for="dept in departments" :key="dept.id" :value="dept.dept_name">{{ dept.dept_name }}</option>
+                </select>
+                <ChevronDown class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
+            <!-- Status (Only when editing and admin) -->
+            <div v-if="isEditing && auth.isAdmin" class="space-y-1.5">
+              <label class="block font-bold text-slate-400">운영 상태</label>
+              <div class="relative">
+                <select v-model="assetForm.status" class="input-field text-xs py-2 appearance-none cursor-pointer">
+                  <option value="available">사용 가능</option>
+                  <option value="in_use">사용 중</option>
+                  <option value="under_maintenance">수리/점검 중</option>
+                  <option value="disposed">폐기됨</option>
+                </select>
+                <ChevronDown class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            <!-- Optional Info Header -->
+            <div class="pt-4 mt-2 border-t border-slate-200">
+              <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-100 px-2 py-1 rounded">추가 정보 (선택사항)</span>
+            </div>
+
             <!-- Purchase Information -->
-            <div class="bg-slate-50/30 p-4 border border-slate-200 rounded-xl space-y-3">
+            <div class="bg-slate-50/30 p-4 border border-slate-200 rounded-xl space-y-3 mt-2">
               <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">구입 정보</span>
               
               <div class="grid grid-cols-2 gap-3">
@@ -837,89 +1087,10 @@ const formatPrice = (val) => {
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-1.5">
-                <label class="block font-bold text-slate-400">보관/배치 위치 <span class="text-rose-500">*</span></label>
-                <div class="relative">
-                  <select v-model="assetForm.location" required class="input-field text-xs py-2 appearance-none cursor-pointer">
-                    <option v-for="loc in locations" :key="loc.id" :value="loc.location_name">{{ loc.location_name }}</option>
-                  </select>
-                  <ChevronDown class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-              <div class="space-y-1.5">
-                <label class="block font-bold text-slate-400">소유/관리 부서 <span class="text-rose-500">*</span></label>
-                <div class="relative">
-                  <select v-model="assetForm.dept_name" required class="input-field text-xs py-2 appearance-none cursor-pointer">
-                    <option v-for="dept in departments" :key="dept.id" :value="dept.dept_name">{{ dept.dept_name }}</option>
-                  </select>
-                  <ChevronDown class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-1.5">
-                <label class="block font-bold text-slate-400">담당자 성명 <span class="text-rose-500">*</span></label>
-                <input v-model="assetForm.manager_name" type="text" required class="input-field text-xs py-2" />
-              </div>
-              <div class="space-y-1.5">
-                <label class="block font-bold text-slate-400">담당자 연락처 <span class="text-rose-500">*</span></label>
-                <input v-model="assetForm.manager_contact" type="text" required class="input-field text-xs py-2" />
-              </div>
-            </div>
 
             <div class="space-y-1.5">
               <label class="block font-bold text-slate-400">상세 설명 및 특이사항</label>
               <textarea v-model="assetForm.description" placeholder="메모, 액세서리 구성품 정보 등을 작성" rows="2" class="input-field text-xs resize-none"></textarea>
-            </div>
-
-            <!-- Status (Only when editing and admin) -->
-            <div v-if="isEditing && auth.isAdmin" class="space-y-1.5">
-              <label class="block font-bold text-slate-400">운영 상태</label>
-              <div class="relative">
-                <select v-model="assetForm.status" class="input-field text-xs py-2 appearance-none cursor-pointer">
-                  <option value="available">사용 가능</option>
-                  <option value="in_use">사용 중</option>
-                  <option value="under_maintenance">수리/점검 중</option>
-                  <option value="disposed">폐기됨</option>
-                </select>
-                <ChevronDown class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-            </div>
-
-            <!-- Image Upload -->
-            <div class="space-y-2 pt-2 border-t border-slate-200">
-              <label class="block font-bold text-slate-400">자산 실물 사진 등록</label>
-              
-              <!-- Hidden inputs -->
-              <input type="file" ref="fileInput" @change="handleImageChange" accept="image/*" class="hidden" />
-              <input type="file" ref="cameraInput" @change="handleImageChange" accept="image/*" capture="environment" class="hidden" />
-              
-              <!-- Custom action buttons -->
-              <div class="grid grid-cols-2 gap-3 mt-1">
-                <button type="button" @click="fileInput.click()" class="flex items-center justify-center gap-1.5 py-2.5 px-4 bg-slate-100 active:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-sm">
-                  <ImageIcon class="w-4 h-4 text-slate-500" />
-                  앨범에서 선택
-                </button>
-                <button type="button" @click="cameraInput.click()" class="flex items-center justify-center gap-1.5 py-2.5 px-4 bg-indigo-50 active:bg-indigo-100 border border-indigo-100 text-indigo-650 text-xs font-bold rounded-xl transition-all shadow-sm">
-                  <Camera class="w-4 h-4 text-indigo-600" />
-                  카메라로 촬영
-                </button>
-              </div>
-
-              <!-- Preview window -->
-              <div v-if="imagePreviewUrl" class="mt-3 relative w-full aspect-[4/3] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center shadow-md animate-in fade-in duration-200">
-                <img :src="imagePreviewUrl" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" @click="openImageZoom(imagePreviewUrl)" title="크게 보기" />
-                <button type="button" @click="clearSelectedImage" class="absolute top-2.5 right-2.5 p-1.5 bg-slate-900/60 hover:bg-slate-900/85 text-white rounded-full transition-colors">
-                  <X class="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div v-if="isEditing && assetForm.image_url" class="flex items-center gap-2 mt-2">
-                <input v-model="removeImageChecked" type="checkbox" id="remove-img" class="rounded text-indigo-600 focus:ring-0 focus:ring-offset-0 bg-white border-slate-300 w-4 h-4" />
-                <label for="remove-img" class="text-slate-400 font-semibold">기존 사진 삭제</label>
-              </div>
             </div>
 
           </div>
@@ -1005,14 +1176,27 @@ const formatPrice = (val) => {
 
           <div class="p-6 space-y-5 max-h-[65vh] overflow-y-auto text-xs">
             <!-- Asset Brief -->
-            <div v-if="selectedMaintenanceAsset" class="p-3 bg-white/40 rounded-xl border border-slate-200 flex items-center gap-3">
-              <div class="w-10 h-10 bg-white border border-slate-200 rounded flex items-center justify-center">
-                <component :is="getCategoryIcon(selectedMaintenanceAsset.category_name)" class="w-5 h-5 text-slate-400" />
+            <div v-if="selectedMaintenanceAsset" class="p-3 bg-white/40 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white border border-slate-200 rounded flex items-center justify-center">
+                  <component :is="getCategoryIcon(selectedMaintenanceAsset.category_name)" class="w-5 h-5 text-slate-400" />
+                </div>
+                <div>
+                  <div class="font-bold text-slate-800 text-xs flex items-center gap-2">
+                    {{ selectedMaintenanceAsset.asset_name }}
+                    <span v-if="selectedMaintenanceAsset.status === 'under_maintenance'" class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-black">정비 중</span>
+                  </div>
+                  <div class="text-[9px] text-indigo-600 font-bold mt-0.5">코드: {{ selectedMaintenanceAsset.item_code }}</div>
+                </div>
               </div>
-              <div>
-                <div class="font-bold text-slate-800 text-xs">{{ selectedMaintenanceAsset.asset_name }}</div>
-                <div class="text-[9px] text-indigo-600 font-bold mt-0.5">코드: {{ selectedMaintenanceAsset.item_code }}</div>
-              </div>
+              <button 
+                v-if="selectedMaintenanceAsset.status !== 'under_maintenance'"
+                @click="markAsMaintenance(selectedMaintenanceAsset)"
+                class="btn-secondary w-full sm:w-auto py-2 px-3 text-[10px] flex items-center justify-center gap-1 shrink-0 bg-white hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 border-slate-200 transition-colors"
+              >
+                <AlertTriangle class="w-3 h-3" />
+                정비 필요 상태로 전환
+              </button>
             </div>
 
             <!-- Maintenance History Table -->
@@ -1078,7 +1262,7 @@ const formatPrice = (val) => {
                 <textarea v-model="maintenanceForm.description" placeholder="수리 규격 및 내역 서술" required rows="2" class="input-field text-xs resize-none"></textarea>
               </div>
 
-              <button type="submit" class="btn-primary w-full py-2 text-xs font-bold shadow-none">추가 등록</button>
+              <button type="submit" class="btn-primary w-full py-3 mt-4 text-xs font-bold shadow-none">완료 처리 및 정비 내역 등록</button>
             </form>
           </div>
 
@@ -1181,6 +1365,14 @@ const formatPrice = (val) => {
               <!-- Specs Grid -->
               <div class="grid grid-cols-2 gap-4 text-xs">
                 <div class="p-3 bg-slate-50/30 border border-slate-200/80 rounded-xl space-y-1">
+                  <span class="text-[10px] text-slate-400 font-bold">카테고리</span>
+                  <p class="font-bold text-slate-800">{{ selectedDetailAsset.category_name || '미지정' }}</p>
+                </div>
+                <div class="p-3 bg-slate-50/30 border border-slate-200/80 rounded-xl space-y-1">
+                  <span class="text-[10px] text-slate-400 font-bold">보관 및 배치 위치</span>
+                  <p class="font-bold text-slate-800">{{ selectedDetailAsset.location || '보관함' }}</p>
+                </div>
+                <div class="p-3 bg-slate-50/30 border border-slate-200/80 rounded-xl space-y-1">
                   <span class="text-[10px] text-slate-400 font-bold">물품 고유 코드</span>
                   <p class="font-bold text-slate-800">{{ selectedDetailAsset.item_code }}</p>
                 </div>
@@ -1189,27 +1381,18 @@ const formatPrice = (val) => {
                   <p class="font-mono font-bold text-slate-800">{{ selectedDetailAsset.serial_number || '없음' }}</p>
                 </div>
                 <div class="p-3 bg-slate-50/30 border border-slate-200/80 rounded-xl space-y-1">
-                  <span class="text-[10px] text-slate-400 font-bold">보관 및 배치 위치</span>
-                  <p class="font-bold text-slate-800">{{ selectedDetailAsset.location || '보관함' }}</p>
-                </div>
-                <div class="p-3 bg-slate-50/30 border border-slate-200/80 rounded-xl space-y-1">
                   <span class="text-[10px] text-slate-400 font-bold">관리 및 소유 부서</span>
                   <p class="font-bold text-slate-800">{{ selectedDetailAsset.dept_name }}</p>
                 </div>
-                <div class="p-3 bg-slate-50/30 border border-slate-200/80 rounded-xl space-y-1 col-span-2">
-                  <span class="text-[10px] text-slate-400 font-bold">카테고리</span>
-                  <p class="font-bold text-slate-800">{{ selectedDetailAsset.category_name || '미지정' }}</p>
+                <div class="p-3 bg-slate-50/30 border border-slate-200/80 rounded-xl space-y-1">
+                  <span class="text-[10px] text-slate-400 font-bold">등록 일자</span>
+                  <p class="font-bold text-slate-800">{{ selectedDetailAsset.created_at ? selectedDetailAsset.created_at.split('T')[0] : '기록 없음' }}</p>
                 </div>
               </div>
 
-              <div class="space-y-1 text-xs">
-                <span class="text-[10px] text-slate-400 font-bold">담당자 정보</span>
-                <p class="font-bold text-slate-250">{{ selectedDetailAsset.manager_name }} (연락처: {{ selectedDetailAsset.manager_contact }})</p>
-              </div>
-
               <div class="space-y-1 text-xs pt-1 border-t border-slate-200">
-                <span class="text-[10px] text-slate-400 font-bold">자산 설명</span>
-                <p class="text-slate-350 leading-relaxed font-medium whitespace-pre-wrap">{{ selectedDetailAsset.description || '상세 메모가 작성되지 않았습니다.' }}</p>
+                <span class="text-[10px] text-slate-400 font-bold">상세 설명 및 특이사항</span>
+                <p class="text-slate-500 leading-relaxed font-medium whitespace-pre-wrap">{{ selectedDetailAsset.description || '상세 메모가 작성되지 않았습니다.' }}</p>
               </div>
             </div>
 
@@ -1246,20 +1429,7 @@ const formatPrice = (val) => {
                 <p class="font-bold text-slate-800">{{ getUsefulLifeInfo(selectedDetailAsset) }}</p>
               </div>
 
-              <!-- Receipt Image -->
-              <div class="space-y-1.5 text-xs">
-                <span class="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                  <Receipt class="w-3.5 h-3.5 text-slate-600" />
-                  구입 영수증 사진
-                </span>
-                <div class="aspect-[4/3] bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden">
-                  <img v-if="selectedDetailAsset.receipt_image_url" :src="selectedDetailAsset.receipt_image_url" class="w-full h-full object-contain" />
-                  <div v-else class="text-center text-slate-655 space-y-1">
-                    <Receipt class="w-10 h-10 mx-auto stroke-[1]" />
-                    <p class="text-[10px] font-bold">등록된 영수증 이미지가 없습니다.</p>
-                  </div>
-                </div>
-              </div>
+
             </div>
 
             <!-- Tab 3: Maintenance A/S History -->
