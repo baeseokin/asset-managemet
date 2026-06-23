@@ -1004,7 +1004,7 @@ const formatPrice = (val) => {
                   <div class="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-2"></div>
                   <span class="text-[10px] text-slate-400 font-semibold">텍스트 분석 중...</span>
                 </div>
-                <div v-else-if="ocrResults.length > 0" class="p-3 border border-sky-200 rounded-lg bg-sky-50/50 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div v-else-if="ocrResults.length > 0" class="p-3 border border-sky-200 rounded-lg bg-sky-50/50 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300 max-h-48 overflow-y-auto">
                   <div class="text-[10px] text-sky-600 font-bold mb-1 flex items-center justify-between">
                     <span>인식된 텍스트 목록 (항목을 눌러 할당)</span>
                     <button type="button" @click="ocrResults = []" class="text-slate-400 hover:text-slate-600"><X class="w-3 h-3"/></button>
