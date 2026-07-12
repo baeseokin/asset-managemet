@@ -270,16 +270,17 @@ onMounted(() => {
           </router-link>
 
           <!-- Pending Requests -->
-          <router-link to="/m/home/approvals" class="glass-card flex items-center justify-between hover:border-indigo-500/50 transition-all group">
-            <div>
-              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">결재 대기 중인 요청</div>
-              <div class="text-3xl font-black text-slate-900 mt-1 tracking-tight">{{ managerStats.pendingRequestsCount }}건</div>
-              <p class="text-[11px] text-slate-455 mt-1">승인 대기 중인 자산 요청 수</p>
+          <div class="glass-card flex items-center justify-between group">
+            <div class="flex items-center gap-3">
+              <div class="p-2.5 bg-indigo-50 rounded-xl text-indigo-600">
+                <CheckSquare class="w-5 h-5" />
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-400">결재 진행중</p>
+                <p class="text-lg font-black text-slate-800">{{ managerStats.pendingRequestsCount }}<span class="text-xs font-bold text-slate-400 ml-1">건</span></p>
+              </div>
             </div>
-            <div class="w-12 h-12 bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white rounded-xl flex items-center justify-center transition-all duration-300">
-              <CheckSquare class="w-6 h-6" />
-            </div>
-          </router-link>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

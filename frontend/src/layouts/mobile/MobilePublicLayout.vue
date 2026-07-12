@@ -53,15 +53,15 @@
             </div>
             
             <nav class="flex-1 space-y-1.5 overflow-y-auto">
-              <router-link v-for="item in allMenuItems" :key="item.name"
-                :to="item.path" @click="isDrawerOpen = false"
+              <button v-for="item in allMenuItems" :key="item.name"
+                @click="() => { isDrawerOpen = false; router.push(item.path) }"
                 :class="[
-                  'flex items-center gap-3 text-sm py-3.5 px-4 rounded-xl transition-all',
+                  'w-full flex items-center gap-3 text-sm py-3.5 px-4 rounded-xl transition-all',
                   route.path === item.path ? 'bg-blue-50 text-blue-500 font-bold' : 'font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 ]">
                 <component :is="item.icon" :class="route.path === item.path ? 'text-blue-500' : 'text-slate-400'" class="w-5 h-5" />
                 {{ item.name }}
-              </router-link>
+              </button>
             </nav>
             
             <div class="space-y-3">
@@ -125,7 +125,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../store/auth'
 import {
   LogOut, Shield, LayoutGrid, Search, User, Menu, X,
@@ -133,6 +133,7 @@ import {
 } from 'lucide-vue-next'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const isDrawerOpen = ref(false)
 
