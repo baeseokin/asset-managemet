@@ -139,9 +139,9 @@ onMounted(() => {
             <!-- Name -->
             <div class="space-y-1.5">
               <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">이름</label>
-              <div class="relative flex items-center">
+              <div class="relative flex items-center opacity-70">
                 <User class="w-5 h-5 text-slate-400 absolute left-3.5" />
-                <input type="text" v-model="profile.user_name" class="input-field pl-11" placeholder="성함을 입력하세요" />
+                <input type="text" :value="profile.user_name" disabled class="input-field pl-11 cursor-not-allowed" placeholder="성함을 입력하세요" />
               </div>
             </div>
 
