@@ -197,11 +197,11 @@ const allMenuItems = computed(() => {
 
   if (auth.isAdmin || auth.isManager) {
     items.push({ name: '보관 장소 관리', icon: MapPin, path: '/m/home/locations' })
+    items.push({ name: '카테고리 관리', icon: Layers, path: '/m/home/categories' })
+    items.push({ name: '조직/부서 관리', icon: Building2, path: '/m/home/departments' })
   }
 
   if (auth.isAdmin) {
-    items.push({ name: '카테고리 관리', icon: Layers, path: '/m/home/categories' })
-    items.push({ name: '조직/부서 관리', icon: Building2, path: '/m/home/departments' })
     items.push({ name: '사용자 권한 관리', icon: Users, path: '/m/home/users' })
   }
 

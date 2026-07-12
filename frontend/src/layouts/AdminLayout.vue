@@ -17,12 +17,12 @@ const navItems = computed(() => {
   if (auth.isAdmin || auth.isManager) {
     items.push({ name: '자산 정보 관리', icon: Briefcase, path: '/admin/assets' })
     items.push({ name: '보관 장소 관리', icon: MapPin, path: '/admin/locations' })
+    items.push({ name: '카테고리 관리', icon: Layers, path: '/admin/categories' })
+    items.push({ name: '조직/부서 관리', icon: Building2, path: '/admin/departments' })
   }
   if (auth.isAdmin) {
     items.push({ name: '자산 결재 대기함', icon: CheckSquare, path: '/admin/approvals' })
-    items.push({ name: '카테고리 관리', icon: Layers, path: '/admin/categories' })
     items.push({ name: '사용자 권한 관리', icon: Users, path: '/admin/users' })
-    items.push({ name: '조직/부서 관리', icon: Building2, path: '/admin/departments' })
   }
   return items
 })

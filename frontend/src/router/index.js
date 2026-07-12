@@ -82,13 +82,13 @@ const router = createRouter({
           path: 'departments',
           name: 'DepartmentManagement',
           component: () => import('../views/DepartmentManagementView.vue'),
-          meta: { requiresAdmin: true }
+          meta: { requiresAdminOrManager: true }
         },
         {
           path: 'categories',
           name: 'CategoryManagement',
           component: () => import('../views/CategoryManagementView.vue'),
-          meta: { requiresAdmin: true }
+          meta: { requiresAdminOrManager: true }
         },
         {
           path: 'locations',
@@ -168,13 +168,13 @@ const router = createRouter({
           path: 'departments',
           name: 'MobileDepartmentManagement',
           component: () => import('../views/mobile/DepartmentManagementView.vue'),
-          meta: { requiresAdmin: true }
+          meta: { requiresAdminOrManager: true }
         },
         {
           path: 'categories',
           name: 'MobileCategoryManagement',
           component: () => import('../views/mobile/CategoryManagementView.vue'),
-          meta: { requiresAdmin: true }
+          meta: { requiresAdminOrManager: true }
         },
         {
           path: 'locations',

@@ -3,7 +3,6 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import QrcodeVue from 'qrcode.vue'
-import Tesseract from 'tesseract.js'
 import { useAuthStore } from '@/store/auth'
 import { useModalStore } from '@/store/useModalStore'
 import { 
@@ -30,7 +29,6 @@ import {
   ChevronDown,
   Eye,
   Receipt,
-  ScanText,
   Image as ImageIcon,
   Camera
 } from 'lucide-vue-next'
@@ -321,74 +319,6 @@ const handleImageChange = async (e) => {
   }
 }
 
-const ocrInput = ref(null)
-const isOcrLoading = ref(false)
-const ocrResults = ref([])
-
-const handleOcrScan = async (e) => {
-  const file = e.target.files[0]
-  if (!file) return
-
-  isOcrLoading.value = true
-  ocrResults.value = []
-  
-  try {
-    const result = await Tesseract.recognize(file, 'eng+kor', {
-      logger: m => console.log(m)
-    })
-    
-    // Split by newlines and filter empty
-    const lines = result.data.text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-    
-    const analyzedLines = []
-    lines.forEach(line => {
-      let recommendation = null
-      let cleanText = line
-      const upperLine = line.toUpperCase()
-      
-      const manufacturers = ['SAMSUNG', 'APPLE', 'LG', 'SHURE', 'SONY', 'DELL', 'HP', 'LENOVO', 'ASUS', 'LOGITECH', '삼성', '엘지', '애플', '소니', '로지텍', '주식회사', 'INC', 'CORP']
-      
-      const snMatch = upperLine.match(/(?:S\/N|SN|SERIAL\s*NO|SERIAL)[\s:;\-\.]*([A-Z0-9\-]+)/)
-      const codeMatch = upperLine.match(/(?:MODEL|P\/N|PN|CODE|모델명|모델)[\s:;\-\.]*([A-Z0-9\-]+)/)
-
-      if (snMatch && snMatch[1].length >= 4) {
-        recommendation = 'sn'
-        cleanText = snMatch[1]
-      } else if (codeMatch && codeMatch[1].length >= 3) {
-        recommendation = 'item_code'
-        cleanText = codeMatch[1]
-      } else if (manufacturers.some(m => upperLine.includes(m))) {
-        recommendation = 'manufacturer'
-      } else if (/^[A-Z0-9\-]{8,20}$/.test(upperLine) && !upperLine.includes(' ')) {
-        recommendation = 'sn'
-      } else if (/^[A-Z0-9\-]{4,15}$/.test(upperLine) && !upperLine.includes(' ')) {
-        recommendation = 'item_code'
-      }
-
-      if (!analyzedLines.some(a => a.text === cleanText)) {
-        analyzedLines.push({ text: cleanText, recommendation })
-      }
-    })
-
-    ocrResults.value = analyzedLines
-  } catch (err) {
-    modal.showAlert('텍스트 추출 중 오류가 발생했습니다.')
-    console.error('OCR Error:', err)
-  } finally {
-    isOcrLoading.value = false
-    e.target.value = ''
-  }
-}
-
-const assignOcrText = (text, field) => {
-  if (field === 'sn') {
-    assetForm.value.serial_number = text
-  } else if (field === 'item_code') {
-    assetForm.value.item_code = text
-  } else if (field === 'manufacturer') {
-    assetForm.value.manufacturer = text
-  }
-}
 
 const clearSelectedImage = () => {
   selectedImageFile.value = null
@@ -415,7 +345,6 @@ const openAddAssetModal = () => {
   selectedImageFile.value = null
   imagePreviewUrl.value = null
   removeImageChecked.value = false
-  ocrResults.value = []
   assetForm.value = {
     asset_name: '',
     category_name: categories.value[0]?.category_name || '',
@@ -444,7 +373,6 @@ const openEditAssetModal = (asset) => {
   selectedImageFile.value = null
   imagePreviewUrl.value = asset.image_url || null
   removeImageChecked.value = false
-  ocrResults.value = []
   
   let pDate = ''
   if (asset.purchase_date) {
@@ -986,62 +914,7 @@ const formatPrice = (val) => {
               <input v-model="assetForm.asset_name" type="text" placeholder="예: SHURE SM58 마이크 2호기" required class="input-field text-xs py-2" />
             </div>
 
-            <div class="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-              <div class="flex flex-col gap-2 mb-2">
-                <div class="flex justify-between items-center">
-                  <label class="block font-bold text-slate-400">식별 정보 및 제조사</label>
-                  <div class="flex gap-2">
-                    <button type="button" @click="ocrInput.click()" class="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-[10px] font-bold shadow-md flex items-center transition-colors">
-                      <ScanText class="w-3.5 h-3.5 mr-1" />
-                      OCR 스캔
-                    </button>
-                  </div>
-                  <input type="file" ref="ocrInput" @change="handleOcrScan" accept="image/*" class="hidden" />
-                </div>
-                
-                <!-- OCR Results Section -->
-                <div v-if="isOcrLoading" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-lg bg-white">
-                  <div class="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                  <span class="text-[10px] text-slate-400 font-semibold">텍스트 분석 중...</span>
-                </div>
-                <div v-else-if="ocrResults.length > 0" class="p-3 border border-sky-200 rounded-lg bg-sky-50/50 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300 max-h-48 overflow-y-auto">
-                  <div class="text-[10px] text-sky-600 font-bold mb-1 flex items-center justify-between">
-                    <span>인식된 텍스트 목록 (항목을 눌러 할당)</span>
-                    <button type="button" @click="ocrResults = []" class="text-slate-400 hover:text-slate-600"><X class="w-3 h-3"/></button>
-                  </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    <div v-for="(item, idx) in ocrResults" :key="idx" class="group relative">
-                      <button type="button" class="px-2 py-1 bg-white border rounded shadow-sm text-[10px] text-slate-700 transition-colors text-left max-w-[200px] truncate flex items-center gap-1" :class="item.recommendation ? 'border-sky-400 bg-sky-50' : 'border-slate-200 hover:border-sky-300 hover:bg-sky-50'" :title="item.text">
-                        {{ item.text }}
-                        <span v-if="item.recommendation === 'manufacturer'" class="bg-purple-100 text-purple-600 px-1 rounded text-[8px] whitespace-nowrap">제조사</span>
-                        <span v-if="item.recommendation === 'sn'" class="bg-emerald-100 text-emerald-600 px-1 rounded text-[8px] whitespace-nowrap">S/N</span>
-                        <span v-if="item.recommendation === 'item_code'" class="bg-amber-100 text-amber-600 px-1 rounded text-[8px] whitespace-nowrap">코드</span>
-                      </button>
-                      <div class="absolute top-full left-0 mt-1 hidden group-hover:flex group-focus-within:flex flex-col bg-slate-800 text-white rounded shadow-xl text-[10px] z-10 w-32 overflow-hidden border border-slate-700">
-                        <button type="button" @click="assignOcrText(item.text, 'manufacturer')" class="px-3 py-2 text-left hover:bg-slate-700 transition-colors">제조사로 할당</button>
-                        <button type="button" @click="assignOcrText(item.text, 'item_code')" class="px-3 py-2 text-left hover:bg-slate-700 transition-colors">물품 코드로 할당</button>
-                        <button type="button" @click="assignOcrText(item.text, 'sn')" class="px-3 py-2 text-left hover:bg-slate-700 transition-colors">시리얼 번호로 할당</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              <div class="space-y-1">
-                <span class="text-[10px] text-slate-400 font-semibold">제조사</span>
-                <input v-model="assetForm.manufacturer" type="text" placeholder="예: 삼성전자, Apple, SHURE" class="input-field text-xs py-2 bg-white" />
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1">
-                  <span class="text-[10px] text-slate-400 font-semibold">물품 코드</span>
-                  <input v-model="assetForm.item_code" type="text" placeholder="직접입력" class="input-field text-xs py-2 bg-white" />
-                </div>
-                <div class="space-y-1">
-                  <span class="text-[10px] text-slate-400 font-semibold">시리얼 번호 (S/N)</span>
-                  <input v-model="assetForm.serial_number" type="text" placeholder="직접입력" class="input-field text-xs py-2 bg-white" />
-                </div>
-              </div>
-            </div>
 
             <div class="space-y-1.5">
               <label class="block font-bold text-slate-400">카테고리 <span class="text-rose-500">*</span></label>
@@ -1079,6 +952,8 @@ const formatPrice = (val) => {
               </div>
             </div>
 
+
+
             <!-- Status (Only when editing and admin) -->
             <div v-if="isEditing && auth.isAdmin" class="space-y-1.5">
               <label class="block font-bold text-slate-400">운영 상태</label>
@@ -1096,6 +971,26 @@ const formatPrice = (val) => {
             <!-- Optional Info Header -->
             <div class="pt-4 mt-2 border-t border-slate-200">
               <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-100 px-2 py-1 rounded">추가 정보 (선택사항)</span>
+            </div>
+
+            <!-- Identification Information -->
+            <div class="bg-slate-50/30 p-4 border border-slate-200 rounded-xl space-y-3 mt-2 mb-4">
+              <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">식별 정보 및 제조사</span>
+              
+              <div class="space-y-1">
+                <label class="block font-medium text-slate-400">제조사</label>
+                <input v-model="assetForm.manufacturer" type="text" placeholder="예: 삼성전자, Apple, SHURE" class="input-field text-xs py-1.5 bg-white" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                  <label class="block font-medium text-slate-400">물품 코드</label>
+                  <input v-model="assetForm.item_code" type="text" placeholder="직접입력" class="input-field text-xs py-1.5 bg-white" />
+                </div>
+                <div class="space-y-1">
+                  <label class="block font-medium text-slate-400">시리얼 번호 (S/N)</label>
+                  <input v-model="assetForm.serial_number" type="text" placeholder="직접입력" class="input-field text-xs py-1.5 bg-white" />
+                </div>
+              </div>
             </div>
 
             <!-- Purchase Information -->
@@ -1522,6 +1417,8 @@ const formatPrice = (val) => {
         <img :src="zoomedImageUrl" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" @click.stop />
       </div>
     </Teleport>
+
+
 
   </div>
 </template>
